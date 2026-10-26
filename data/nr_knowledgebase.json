@@ -1,0 +1,1223 @@
+{
+  "title": "3GPP 5G NR MAC Downlink & Carrier Aggregation Mastery Curriculum",
+  "version": "2.0",
+  "totalWeeks": 10,
+  "totalModules": 40,
+  "description": "Comprehensive, exhaustive transition curriculum and reference blueprint for senior telecom software engineers transitioning from 4G LTE L2 to 5G NR Baseband and Cloud-RAN architecture. Covers 3GPP Rel-15/16/17 specifications, low-level modern C++ systems, real-time RTOS determinism, calculation drills, and field log triage.",
+  "weeks": [
+    {
+      "week": 1,
+      "phase": 1,
+      "phaseTitle": "Spec Architecture & Systems Foundation",
+      "title": "5G Numerologies, Slot Formats & 125 µs Real-Time Constraints",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 38.211 §4.2, §4.3",
+        "TS 38.213 §11.1",
+        "PREEMPT_RT"
+      ],
+      "summary": "Master flexible OFDM numerologies (15 to 120 kHz), scalable slot grids, normal vs extended CP, slot format indicator (SFI DCI 2_0), and the 125 µs hard scheduler deadline under real-time Linux.",
+      "deliverable": "C++ numerology & slot lookup table, PREEMPT_RT core-pinning setup, and 125 µs scheduler latency budget model.",
+      "topics": [
+        {
+          "id": "w1_t1",
+          "title": "Flexible Numerologies (SCS) & Scalable Time Grid",
+          "specClause": "3GPP TS 38.211 §4.2",
+          "explanation": "Unlike 4G LTE's fixed 15 kHz Subcarrier Spacing (1 ms subframe / 1 ms TTI), 5G NR defines an exponential scalable numerology:\nΔf = 2^μ · 15 kHz, where μ ∈ {0, 1, 2, 3, 4}.\n- μ = 0 (15 kHz SCS): 1.0 ms slot duration, 1 slot per 1 ms subframe (FR1 Sub-3 GHz macro coverage).\n- μ = 1 (30 kHz SCS): 0.5 ms slot duration, 2 slots per subframe (FR1 C-band standard deployment, 3.5 GHz).\n- μ = 2 (60 kHz SCS): 0.25 ms slot duration, 4 slots per subframe (FR1/FR2 transition band).\n- μ = 3 (120 kHz SCS): 125 µs slot duration, 8 slots per subframe (FR2 mmWave 28 GHz ultra-high throughput).\n- μ = 4 (240 kHz SCS): 62.5 µs slot duration, 16 slots per subframe (FR2 SSB beam sweeping).\n\nKey Architectural Principle:\nThe radio frame (10 ms) and subframe (1 ms) durations remain constant across all numerologies as the global timing anchors. Only the slot duration shrinks as μ increases, while the number of OFDM symbols per slot remains strictly 14 under normal cyclic prefix.",
+          "keyFormulas": [
+            "Δf = 2^μ · 15 kHz",
+            "Slot Duration T_slot = 1 / 2^μ ms",
+            "Slots per subframe N_slot^subframe,μ = 2^μ",
+            "Slots per radio frame N_slot^frame,μ = 10 · 2^μ",
+            "OFDM Symbol Duration T_symb = T_slot / 14",
+            "PRB Bandwidth BW_PRB = 12 · Δf"
+          ],
+          "memoryAids": [
+            "Rule of Powers of 2: Incrementing μ doubles SCS, halves slot duration, and doubles slot count per 1 ms subframe.",
+            "Subframe is the clock (1 ms); Slot is the worker."
+          ],
+          "pitfalls": [
+            "Confusing Subframe (always 1 ms) with Slot (varies from 1 ms down to 62.5 µs).",
+            "Assuming symbol count per slot varies with numerology — it is always 14 symbols under normal CP."
+          ],
+          "codeSnippet": "// 5G NR Numerology Table Lookups\nstruct NrNumerologyConfig {\n    uint8_t  mu;\n    uint32_t scs_khz;\n    double   slot_duration_ms;\n    uint8_t  slots_per_subframe;\n    uint32_t prb_bandwidth_khz;\n};\n\nconstexpr NrNumerologyConfig NUMEROLOGIES[5] = {\n    {0,  15, 1.0,    1,  180},\n    {1,  30, 0.5,    2,  360},\n    {2,  60, 0.25,   4,  720},\n    {3, 120, 0.125,  8, 1440},\n    {4, 240, 0.0625, 16, 2880}\n};"
+        },
+        {
+          "id": "w1_t2",
+          "title": "Normal vs Extended CP, Slot Formats & SFI (DCI 2_0)",
+          "specClause": "3GPP TS 38.211 §4.3.2, TS 38.213 §11.1",
+          "explanation": "5G NR defines two Cyclic Prefix formats:\n1. **Normal CP**: 14 OFDM symbols per slot. Supported across all numerologies (μ = 0, 1, 2, 3, 4).\n2. **Extended CP**: 12 OFDM symbols per slot. Supported ONLY at μ = 2 (60 kHz SCS). Extended CP provides a 4.16 µs guard interval to absorb extreme multipath delay spread in high-dispersion macro cell mmWave environments.\n\n**Slot Formats & Dynamic TDD**:\nEvery symbol inside a 14-symbol slot is designated as:\n- Downlink (D): Reserved for PDSCH, PDCCH, SSB, CSI-RS.\n- Uplink (U): Reserved for PUSCH, PUCCH, PRACH, SRS.\n- Flexible (F): Dynamic symbol that can be scheduled as either DL or UL via DCI grants, or used as a guard period (GP) for DL-to-UL switching.\n\nSlot formats are signaled semi-statically via RRC `tdd-UL-DL-ConfigurationCommon` or dynamically overridden slot-by-slot using DCI format 2_0 (Slot Format Indicator - SFI).",
+          "keyFormulas": [
+            "Symbols/slot: Normal CP = 14, Extended CP = 12 (at μ = 2 only)",
+            "DCI 2_0 SFI Field: 8-bit index mapping to 256 predefined slot format tables in TS 38.213 Table 11.1.1-1",
+            "Guard Period GP duration: GP ≥ 2 · Propagation Delay + DL-to-UL Rx/Tx switching time"
+          ],
+          "memoryAids": [
+            "D = Data Down, U = User Uplink, F = Flexible/Flip.",
+            "Extended CP only lives at 60 kHz (μ = 2) to fight heavy multipath echoes."
+          ],
+          "pitfalls": [
+            "Scheduling DL transmission on U symbols or F symbols without explicit DCI grant overrides.",
+            "Assuming Extended CP is supported on standard 30 kHz FR1 (it is strictly prohibited by 38.211)."
+          ],
+          "codeSnippet": "// Slot symbol configuration mask\nenum class SymbolType : uint8_t {\n    DOWNLINK = 0,\n    UPLINK   = 1,\n    FLEXIBLE = 2\n};\n\nstruct SlotFormat {\n    uint8_t format_id;\n    SymbolType symbols[14];\n};\n\nbool is_schedulable_dl(SymbolType s) {\n    return (s == SymbolType::DOWNLINK || s == SymbolType::FLEXIBLE);\n}"
+        },
+        {
+          "id": "w1_t3",
+          "title": "Real-Time Latency Budgets & Scheduler Execution Pipeline",
+          "specClause": "TS 38.321 & O-RAN CUS Latency Constraints",
+          "explanation": "A 5G NR baseband scheduler executing at 30 kHz (500 µs slot) or 120 kHz (125 µs slot) operates under hard real-time execution constraints. Missing the slot tick means the radio transmits zeros or unmodulated carriers, dropping commercial throughput immediately.\n\n**The 5-Stage Scheduler Pipeline**:\n- Stage 1: Feedback Ingestion (15 µs) - Process L1 UCI Indications (HARQ ACK/NACK, CQI/PMI), update OLLA offsets, re-queue NACKed processes.\n- Stage 2: Time-Domain Candidate Filtering (20 µs) - Scan connected UEs, compute Proportional Fair metrics, AVX-512 partial sort top candidates.\n- Stage 3: Frequency-Domain Resource Allocation (45 µs) - Allocate PRBs, look up TBS from TS 38.214 tables, handle retransmissions.\n- Stage 4: PDU Assembly & FAPI Dispatch (30 µs) - Assemble MAC subheaders + MAC CEs, pull RLC SDUs via zero-copy descriptors, emit FAPI DL_TTI.request.\n- Stage 5: DMA Baseband Transfer & Safety Margin (15 µs).\nTotal execution time: ~110 µs, strictly fitting inside the 125 µs deadline.",
+          "keyFormulas": [
+            "Hard Deadline: T_exec ≤ T_slot - T_DMA - T_margin",
+            "At 30 kHz: T_exec ≤ 380 µs; At 120 kHz: T_exec ≤ 110 µs",
+            "Proportional Fair Metric: W_i = (R_i / Avg_R_i) · QoS_weight"
+          ],
+          "memoryAids": [
+            "110 µs finish: Ingest → Filter → Allocate → Dispatch. Clock tick waits for no thread."
+          ],
+          "pitfalls": [
+            "Calling malloc/new, printf, or blocking system calls inside the real-time scheduling loop.",
+            "Using non-priority-inheritance mutexes that allow priority inversion to stall the scheduler core."
+          ],
+          "codeSnippet": "#include <pthread.h>\n#include <sched.h>\n#include <sys/mman.h>\n\nvoid configure_realtime_thread(int core_id, int priority_level) {\n    // 1. Lock all memory into RAM to eliminate page faults\n    mlockall(MCL_CURRENT | MCL_FUTURE);\n\n    // 2. Pin thread to isolated CPU core (isolcpus kernel parameter)\n    cpu_set_t cpuset;\n    CPU_ZERO(&cpuset);\n    CPU_SET(core_id, &cpuset);\n    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);\n\n    // 3. Set POSIX real-time FIFO scheduling policy\n    struct sched_param param;\n    param.sched_priority = priority_level; // e.g., 95\n    pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);\n}"
+        },
+        {
+          "id": "w1_t4",
+          "title": "Modern C++ Systems: Cache Line Alignment & Memory Pools",
+          "specClause": "L2 High-Throughput Baseband Architecture",
+          "explanation": "In high-throughput 5G NR software, copying packet buffers (`memcpy`) between PHY, MAC, and RLC saturates CPU memory buses. Furthermore, false sharing across CPU cores running parallel threads causes 10x latency spikes.\n\n**False Sharing Prevention**:\nModern CPUs transfer data in 64-byte cache lines. If Core 1 writes to UE A stats and Core 2 writes to UE B stats on the same 64-byte line, cache coherency (MESI protocol) invalidates each core's L1 cache continually. Use `alignas(64)` on all per-core/per-thread data structures.\n\n**Zero-Copy Memory Pools**:\nDynamic memory allocation is strictly prohibited in real-time baseband loops. Packets and descriptors are allocated during boot in fixed-size slab pools backed by 1 GB hugepages. Subheaders are inserted into pre-allocated headroom via pointer adjustment (`data_ptr -= header_len`), eliminating all buffer copies.",
+          "keyFormulas": [
+            "Cache Line Size = 64 bytes",
+            "Memory Overhead = ≤ 63 bytes padding per aligned struct",
+            "Slab Pool Allocation: O(1) pointer adjustment"
+          ],
+          "memoryAids": [
+            "Align to 64 to keep cores from war. Pre-allocate in pools so your latency stays cool."
+          ],
+          "pitfalls": [
+            "Putting atomic variables updated by different threads into the same struct without 64-byte padding.",
+            "Using standard STL containers like std::vector that dynamically resize and reallocate on the heap."
+          ],
+          "codeSnippet": "// Production-Grade Zero-Copy Packet Descriptor\nstruct alignas(64) PacketDescriptor {\n    uint8_t*  head_ptr;      // Start of physical memory buffer\n    uint8_t*  data_ptr;      // Current active protocol payload\n    uint32_t  data_len;      // Payload length in bytes\n    uint16_t  headroom;      // Reserved prefix for MAC/RLC headers\n    uint16_t  tailroom;      // Reserved suffix for CRC/Padding\n    std::atomic<uint32_t> ref_count; // For HARQ retransmissions\n    uint32_t  pool_index;    // Index in fixed-size slab allocator\n};\n\n// Zero-copy subheader prepend:\nvoid prepend_subheader(PacketDescriptor* desc, const uint8_t* hdr, uint16_t len) {\n    desc->data_ptr -= len;\n    desc->data_len += len;\n    desc->headroom -= len;\n    std::memcpy(desc->data_ptr, hdr, len);\n}"
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "phase": 1,
+      "phaseTitle": "Spec Architecture & Systems Foundation",
+      "title": "TS 38.321 NR MAC Protocol, PDU Redesign & LCP",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 38.321 §5.1, §5.2, §5.4, §6.1"
+      ],
+      "summary": "Master the redesigned NR MAC PDU layout with subheaders at the payload head, Logical Channel Prioritization restrictions (allowedSCS, maxPUSCH-Duration), 4-step vs Rel-16 2-step RACH, and the Timing Advance control loop.",
+      "deliverable": "C++ zero-copy MAC PDU subheader builder, LCP token-bucket allocator, and RACH state machine.",
+      "topics": [
+        {
+          "id": "w2_t1",
+          "title": "NR MAC PDU Architecture: Subheaders at Payload Head & LCID",
+          "specClause": "3GPP TS 38.321 §6.1.2, §6.1.3",
+          "explanation": "In 4G LTE, all MAC subheaders were grouped together at the very beginning of the MAC PDU. This forced the MAC entity to calculate and serialize all subheaders before transmitting payload data.\n\nIn 5G NR, TS 38.321 completely redesigned the MAC PDU:\nEach MAC subheader is placed immediately preceding its corresponding MAC SDU or MAC Control Element (CE).\n- **Subheader Format**:\n  - 1-byte subheader: R (1 bit reserved) + F (1 bit format) + LCID (6 bits) for fixed-length MAC CEs.\n  - 2-byte subheader: R/F/LCID + L (8 bits) when SDU length L < 256 bytes (F = 0).\n  - 3-byte subheader: R/F/LCID + L (16 bits) when SDU length L ≥ 256 bytes (F = 1).\n- **PDU Placement Order**: MAC CEs are placed at the beginning, followed by MAC SDUs, followed by optional padding at the end.\nThis architecture enables hardware DMA streaming: RLC can push SDUs into the radio buffer while MAC writes subheaders just-in-time into the descriptor headroom without re-copying!",
+          "keyFormulas": [
+            "Short subheader (L < 256): 2 bytes (F=0, L=8 bits)",
+            "Long subheader (L ≥ 256): 3 bytes (F=1, L=16 bits)",
+            "LCID: 6 bits (values 0..63 in Rel-15; extended eLCID in Rel-16)"
+          ],
+          "memoryAids": [
+            "4G: All headers in the lobby. 5G: Header attached to each room's door! Allows just-in-time streaming."
+          ],
+          "pitfalls": [
+            "Placing MAC CEs at the end of the PDU (in 5G NR, MAC CEs are placed at the beginning of the MAC PDU).",
+            "Forgetting that the 1-bit F flag sets whether the L length field is 8 bits (0) or 16 bits (1)."
+          ],
+          "codeSnippet": "// 5G NR MAC Subheader Encoder\nuint8_t encode_nr_subhead(uint8_t* buf, uint8_t lcid, uint16_t sdu_len) {\n    if (sdu_len < 256) {\n        buf[0] = (0 << 6) | (lcid & 0x3F); // F = 0\n        buf[1] = static_cast<uint8_t>(sdu_len);\n        return 2;\n    } else {\n        buf[0] = (1 << 6) | (lcid & 0x3F); // F = 1\n        buf[1] = static_cast<uint8_t>((sdu_len >> 8) & 0xFF);\n        buf[2] = static_cast<uint8_t>(sdu_len & 0xFF);\n        return 3;\n    }\n}"
+        },
+        {
+          "id": "w2_t2",
+          "title": "Logical Channel Prioritization (LCP) Algorithm & Restrictions",
+          "specClause": "3GPP TS 38.321 §5.4.3.1",
+          "explanation": "Logical Channel Prioritization (LCP) multiplexes data from multiple RLC radio bearers into a single transport block grant.\n\n**The 2-Step Allocation**:\n- Step 1: Allocate resources to logical channels with Bj > 0 in decreasing priority order up to their Prioritized Bit Rate (PBR).\n- Step 2: Allocate remaining grant resources in strict priority order until the grant or data is exhausted.\n- **Token Bucket Mechanics**: Bj is incremented each TTI: Bj = min(Bj + PBR · Δt, Bucket Size Duration · PBR).\n\n**5G NR LCP Restrictions (Clause 5.4.3.1)**:\nTo prevent sub-optimal mapping of sensitive services (e.g. scheduling high-SCS URLLC grants for bulk eMBB data), RRC can restrict a logical channel with:\n1. `allowedSCS-List`: Logical channel can only use grants with matching numerology.\n2. `maxPUSCH-Duration`: Prevents URLLC from being mapped onto long slots.\n3. `configuredGrantType1Allowed`: Restricts autonomous grant usage.\n4. `allowedServingCells`: Maps critical traffic only to specific carriers.",
+          "keyFormulas": [
+            "Bj = min(Bj + PBR · Δt, BSD · PBR)",
+            "Grant_remaining = Grant - ∑ allocated_bytes",
+            "Bj can become negative after allocation, deducting from future tokens"
+          ],
+          "memoryAids": [
+            "PBR first, Priority second, Restrictions always! Bj is the piggy bank preventing starvation."
+          ],
+          "pitfalls": [
+            "Allowing bulk background data to consume an ultra-low latency grant because allowedSCS-List check was missed.",
+            "Failing to deduct bytes from Bj when grant exceeds current bucket, breaking token-bucket rate limits."
+          ],
+          "codeSnippet": "struct LogicalChannel {\n    uint8_t  id;\n    uint8_t  priority;\n    uint32_t pbr_bytes_per_sec;\n    int32_t  bj_tokens;\n    uint32_t max_bucket_bytes;\n    uint8_t  allowed_scs_mask;\n    uint8_t  max_pusch_duration_symb;\n};\n\nbool check_lcp_restrictions(const LogicalChannel& lch, uint8_t grant_scs, uint8_t grant_duration) {\n    if ((lch.allowed_scs_mask & (1 << grant_scs)) == 0) return false;\n    if (grant_duration > lch.max_pusch_duration_symb) return false;\n    return true;\n}"
+        },
+        {
+          "id": "w2_t3",
+          "title": "Random Access (RACH): 4-Step CBRA vs Rel-16 2-Step RACH",
+          "specClause": "3GPP TS 38.321 §5.1",
+          "explanation": "The Random Access Procedure establishes initial uplink synchronization, RRC connection, and beam failure recovery.\n\n**4-Step Contention-Based RACH (CBRA)**:\n1. **Msg1**: UE transmits random access preamble on PRACH. Base station detects preamble and estimates round-trip delay.\n2. **Msg2 (RAR)**: gNodeB sends Random Access Response on PDSCH (addressed by RA-RNTI). Contains Timing Advance (TA), Uplink Grant, and Temporary C-RNTI (TC-RNTI).\n3. **Msg3**: UE transmits scheduled transmission on PUSCH with CCCH SDU or C-RNTI MAC CE.\n4. **Msg4 (Contention Resolution)**: gNodeB echoes UE identity on PDCCH/PDSCH. If identity matches, contention is resolved.\n\n**Rel-16 2-Step RACH (CFRA/CBRA)**:\nMerges the 4 steps into 2 to cut latency by 50%:\n- **MsgA**: Combines Msg1 preamble on PRACH + Msg3 PUSCH payload.\n- **MsgB**: Combines Msg2 RAR + Msg4 Contention Resolution on PDSCH.\nIdeal for Small Data Transmission (SDT), IoT, and fast handovers.",
+          "keyFormulas": [
+            "RA-RNTI = 1 + s_id + 14 · t_id + 14 · 80 · f_id + 14 · 80 · 8 · ul_carrier_id",
+            "RAR Window: ra-ResponseWindow (configured in SIB1/RRC)",
+            "Contention Resolution Timer: ra-ContentionResolutionTimer (8 to 64 slots)"
+          ],
+          "memoryAids": [
+            "4-Step: Knock → Open → Introduce → Handshake.",
+            "2-Step: Knock & Introduce → Handshake & Enter!"
+          ],
+          "pitfalls": [
+            "Assuming MsgA fallback always retransmits both parts: if preamble is detected but PUSCH fails, UE falls back to Msg3 without re-sending preamble.",
+            "Miscalculating RA-RNTI due to incorrect subframe t_id or symbol s_id coordinates."
+          ],
+          "codeSnippet": "uint32_t calculate_ra_rnti(uint8_t s_id, uint8_t t_id, uint8_t f_id, uint8_t ul_carrier_id) {\n    return 1 + s_id + (14 * t_id) + (14 * 80 * f_id) + (14 * 80 * 8 * ul_carrier_id);\n}"
+        },
+        {
+          "id": "w2_t4",
+          "title": "Timing Advance (TA) Control Loop, Timers & Expiry",
+          "specClause": "3GPP TS 38.321 §5.2",
+          "explanation": "Because UEs reside at varying distances from the gNodeB, uplink transmissions must be advanced in time so they arrive perfectly synchronized at the base station antenna array.\n\n**Initial vs Ongoing TA**:\n1. **Initial TA**: 12-bit value in RAR Msg2 ($N_{TA} \\in [0, 3846]$).\n2. **Ongoing TA**: Sent in Timing Advance Command MAC CE (6-bit index $T_A \\in [0, 63]$).\n   Formula: $N_{TA,new} = N_{TA,old} + (T_A - 31) \\cdot 16 \\cdot 64 / 2^\\mu$.\n   $T_A = 31$ represents NO CHANGE. $T_A < 31$ advances transmission earlier; $T_A > 31$ delays it.\n\n**Timing Alignment Timer (`timeAlignmentTimer`)**:\n- Maintained per Timing Advance Group (TAG: pTAG and sTAG).\n- Reset whenever a TA MAC CE is received.\n- **On TAT Expiry**: UE immediately flushes all HARQ buffers for that TAG, clears configured DL/UL grants, releases PUCCH and SRS resources, and must perform RACH before transmitting uplink data.",
+          "keyFormulas": [
+            "TA adjustment: ΔN_TA = (T_A - 31) · 16 · 64 / 2^μ",
+            "Absolute Time Offset: T_TA = (N_TA + N_TA,offset) · T_c, where T_c ≈ 0.509 ns",
+            "T_A = 31 is zero adjustment"
+          ],
+          "memoryAids": [
+            "31 is zero change! Lower pulls earlier, higher pushes later. TAT expiry kills UL grants instantly."
+          ],
+          "pitfalls": [
+            "Transmitting PUCCH or PUSCH after TAT expiry (causes immediate cell drop).",
+            "Applying a single TAT across different carriers that belong to separate pTAG and sTAG groups."
+          ],
+          "codeSnippet": "int32_t compute_ta_adjustment(uint8_t ta_command, uint8_t mu) {\n    int32_t delta_index = static_cast<int32_t>(ta_command) - 31;\n    return delta_index * 16 * (64 >> mu);\n}"
+        }
+      ]
+    },
+    {
+      "week": 3,
+      "phase": 1,
+      "phaseTitle": "Spec Architecture & Systems Foundation",
+      "title": "Bandwidth Part (BWP) Framework & SCell Power Dynamics",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 38.321 §5.7, §5.13, §5.15",
+        "TS 38.213 §12"
+      ],
+      "summary": "Understand BWP operations, dynamic switching via DCI 0_1/1_1, bwp-InactivityTimer, Rel-16 Dormant BWP power saving, and the connected-mode DRX (cDRX) state machine.",
+      "deliverable": "C++ BWP switching state manager, DCI 2_6 dormant BWP activator, and DRX active-time calculator.",
+      "topics": [
+        {
+          "id": "w3_t1",
+          "title": "Bandwidth Part (BWP) Architecture: Initial, Active & Default",
+          "specClause": "3GPP TS 38.321 §5.15, TS 38.213 §12",
+          "explanation": "A Bandwidth Part is a contiguous subset of physical resource blocks (PRBs) on a carrier with a specific numerology (SCS and CP).\n- **Core Principle**: A UE can be configured with up to 4 DL BWPs and 4 UL BWPs per serving cell, but only ONE DL and ONE UL BWP is actively monitored at any given instant.\n- **BWP Types**:\n  1. **Initial BWP**: Configured via SIB1. Used for cell selection, RACH, and initial RRC connection.\n  2. **Active BWP**: Currently active bandwidth where UE monitors PDCCH and receives PDSCH.\n  3. **Default BWP**: Low-power fallback BWP (e.g. 20 MHz). When traffic pauses and `bwp-InactivityTimer` expires, UE autonomously switches back to the default BWP.\nThis eliminates the massive battery drain of keeping a 100 MHz wideband RF front-end active during idle intervals.",
+          "keyFormulas": [
+            "Max configured BWPs = 4 DL + 4 UL per cell",
+            "Active BWPs at any instant = 1 DL + 1 UL (in Rel-15)",
+            "PRB coordinates: N_BWP^start ≤ PRB < N_BWP^start + N_BWP^size"
+          ],
+          "memoryAids": [
+            "Initial to attach, Active to transact, Default to relax! UE only pays RF power for what it needs."
+          ],
+          "pitfalls": [
+            "Assuming multiple BWPs can be active simultaneously on a single carrier in Rel-15 (only one active BWP).",
+            "Forgetting that numerology can change when switching BWPs, altering slot duration mid-session."
+          ],
+          "codeSnippet": "struct BandwidthPart {\n    uint8_t  bwp_id;\n    uint8_t  mu;             // Numerology (SCS)\n    uint16_t start_prb;\n    uint16_t num_prbs;\n    bool     is_default;\n    bool     is_active;\n};"
+        },
+        {
+          "id": "w3_t2",
+          "title": "Dynamic BWP Switching Mechanics: DCI Formats & Timers",
+          "specClause": "3GPP TS 38.321 §5.15, TS 38.212 §7.3",
+          "explanation": "BWP switching mechanisms:\n1. **DCI-Based Switching**: 1-bit or 2-bit Bandwidth Part Indicator field in DCI format 0_1 (UL) or 1_1 (DL) explicitly switches the active BWP.\n2. **Timer-Based Fallback**: `bwp-InactivityTimer`. When active DL BWP is not the default BWP and no DCI grant is received before the timer expires, UE autonomously reverts to the default BWP.\n3. **RRC-Based Switching**: Reconfigured via `RRCReconfiguration`.\n\n**The BWP Switching Gap**:\nDuring BWP retuning, the UE cannot transmit or receive for a transition gap ($T_{BWP\\_switch}$ up to several slots). The gNodeB MAC scheduler must never allocate grants during this retuning gap.",
+          "keyFormulas": [
+            "BWP Indicator in DCI: 0 bits (if 1 BWP), 1 bit (if 2 BWPs), 2 bits (if 3-4 BWPs)",
+            "Retuning latency: Type 1 (fast baseband) vs Type 2 (slow RF retune) slots",
+            "Inactivity condition: Timer expires && Active BWP ≠ Default BWP ⇒ Switch to Default BWP"
+          ],
+          "memoryAids": [
+            "DCI switches UP on demand; Inactivity Timer drops DOWN to save power automatically."
+          ],
+          "pitfalls": [
+            "Scheduling PDSCH/PUSCH inside the BWP switching gap causes immediate packet drop.",
+            "DCI format 1_0 cannot trigger BWP switch (only fallback DCI)."
+          ],
+          "codeSnippet": "void handle_bwp_inactivity_tick(BandwidthPart& active_bwp, const BandwidthPart& default_bwp, uint32_t& timer) {\n    if (active_bwp.bwp_id != default_bwp.bwp_id) {\n        if (timer > 0) {\n            timer--;\n            if (timer == 0) {\n                // Autonomous switch to default BWP\n                active_bwp = default_bwp;\n            }\n        }\n    }\n}"
+        },
+        {
+          "id": "w3_t3",
+          "title": "Rel-16 Dormant BWP Operation in Carrier Aggregation",
+          "specClause": "3GPP TS 38.321 §5.13, §5.15",
+          "explanation": "In Rel-15 Carrier Aggregation, when an SCell is deactivated to save battery, all channel measurements cease. Re-activating it takes 24-34 ms for RRC signaling, beam alignment, and channel feedback restart.\n\n**Rel-16 Dormant BWP Innovation**:\nThe SCell enters a 'Dormant BWP' state:\n- UE **stops PDCCH blind decoding** (saving 90% of baseband and RF reception energy).\n- UE **continues** periodic CSI measurements, CQI/RI reporting, and beam tracking towards the PCell.\n- Fast Activation: Switching from Dormant BWP back to Active BWP executes in **2 to 4 ms** via a dedicated DCI 1_1 or DCI 2_6 bitmap.\nDelivers near-instantaneous multi-gigabit CA throughput bursts without baseline battery drain.",
+          "keyFormulas": [
+            "Activation latency: Rel-15 SCell activation ≈ 24-34 ms; Rel-16 Dormant BWP switch ≈ 2-4 ms",
+            "Power reduction: ~85-90% PDCCH decoding energy saved",
+            "DCI 2_6: Wake-Up Signal (WUS) bitmap triggering Dormant to Active transition"
+          ],
+          "memoryAids": [
+            "Dormant = Eyes closed, Ears open! No PDCCH decoding, but continuous CSI reporting."
+          ],
+          "pitfalls": [
+            "Confusing SCell deactivation with Dormant BWP: Deactivated SCell stops all CSI measurements; Dormant BWP continues reporting CSI."
+          ],
+          "codeSnippet": "struct SCellState {\n    uint8_t scell_index;\n    bool is_activated;\n    bool is_dormant;\n    \n    void transition_to_active() {\n        is_activated = true;\n        is_dormant = false; // PDCCH monitoring enabled\n    }\n    \n    void transition_to_dormant() {\n        is_activated = true;\n        is_dormant = true;  // Stop PDCCH, continue CSI reporting\n    }\n};"
+        },
+        {
+          "id": "w3_t4",
+          "title": "Discontinuous Reception (cDRX) State Machine & Timers",
+          "specClause": "3GPP TS 38.321 §5.7",
+          "explanation": "Connected-mode DRX (cDRX) powers down UE radio circuits during inactivity while maintaining active RRC connection.\n\n**Key Timers & Parameters**:\n- `drx-onDurationTimer`: Duration the UE stays awake at the start of each DRX cycle.\n- `drx-InactivityTimer`: Duration the UE stays awake after decoding a PDCCH grant indicating new transmission. Every new grant restarts this timer!\n- `drx-RetransmissionTimerDL/UL`: Duration UE stays awake waiting for a retransmission after HARQ RTT expires.\n- `drx-HARQ-RTT-TimerDL`: Minimum time before a DL retransmission is expected.\n- **Active Time**: UE is in Active Time (awake) if ANY of these timers are running, or a Scheduling Request is pending, or a RAR is awaited.",
+          "keyFormulas": [
+            "Cycle condition: [(SFN · 10) + subframe] mod drx-LongCycle == drx-StartOffset",
+            "Active Time = onDuration || InactivityTimer || RetransmissionTimer || SRPending",
+            "Duty cycle: η = T_active / T_cycle"
+          ],
+          "memoryAids": [
+            "On-Duration wakes you up; Inactivity timer keeps the party going if packets keep arriving."
+          ],
+          "pitfalls": [
+            "Scheduling new DL data when UE is in DRX sleep (data must wait until next onDuration or trigger paging).",
+            "Confusing HARQ RTT timer with retransmission timer: UE sleeps during RTT timer!"
+          ],
+          "codeSnippet": "struct DrxContext {\n    uint32_t on_duration_timer;\n    uint32_t inactivity_timer;\n    uint32_t retrans_timer_dl;\n    bool     sr_pending;\n    \n    bool is_in_active_time() const {\n        return (on_duration_timer > 0 || inactivity_timer > 0 || \n                retrans_timer_dl > 0 || sr_pending);\n    }\n};"
+        }
+      ]
+    },
+    {
+      "week": 4,
+      "phase": 2,
+      "phaseTitle": "DL Physical Procedures & Resource Allocation",
+      "title": "PDSCH TDRA (SLIV), FDRA & Mathematical TBS Determination",
+      "estimatedHours": 9,
+      "specs": [
+        "TS 38.214 §5.1.2, §5.1.3",
+        "TS 38.212 §5.4.2"
+      ],
+      "summary": "Deep dive into 3GPP TS 38.214 data procedures: PDSCH Mapping Type A vs Type B, exact SLIV encoding/decoding, FDRA Type 0 bitmap vs Type 1 RIV, the complete 5-step TBS determination algorithm, and LBRM soft buffer sizing.",
+      "deliverable": "C++ SLIV encoder/decoder, Type 1 RIV encoder, and verbatim TS 38.214 §5.1.3.2 TBS calculation engine.",
+      "topics": [
+        {
+          "id": "w4_t1",
+          "title": "PDSCH TDRA: Mapping Type A/B & Exact SLIV Formula",
+          "specClause": "3GPP TS 38.214 §5.1.2.1",
+          "explanation": "Time Domain Resource Allocation (TDRA) indicates slot offset K0, start symbol S, and allocated length L via the 4-bit 'Time domain resource assignment' field in DCI format 1_0/1_1.\n- **Mapping Type A (Slot-Based)**: DM-RS is fixed at symbol 2 or 3 of the slot. S ∈ {2, 3}, L ∈ {3..14}, S + L ≤ 14.\n- **Mapping Type B (Mini-Slot / Non-Slot Based)**: DM-RS is at the FIRST symbol of the PDSCH allocation. S ∈ {0..12}, L ∈ {2, 4, 7}, S + L ≤ 14. Essential for URLLC preemption!\n\n**Start and Length Indicator Value (SLIV)**:\nCompresses S and L into an integer between 0 and 127:\n- If (L - 1) ≤ 7: SLIV = 14 · (L - 1) + S\n- Else: SLIV = 14 · (14 - L + 1) + (14 - 1 - S)",
+          "keyFormulas": [
+            "Condition: 0 < L ≤ 14 - S",
+            "SLIV ≤ 127 (7-bit field)",
+            "Decoding: q = ⌊SLIV/14⌋, r = SLIV mod 14. If q+r ≤ 13 ⇒ L=q+1, S=r; Else ⇒ L=14-q+1, S=14-1-r"
+          ],
+          "memoryAids": [
+            "Type A is the full-slot Apartment (DMRS at symbol 2/3); Type B is the nimble Bicycle (DMRS at first symbol, fast preemption!).",
+            "SLIV flips formula when Length > 7."
+          ],
+          "pitfalls": [
+            "Attempting S + L > 14 (invalid SLIV that crashes baseband decoders).",
+            "Using Mapping Type A with S ≠ 2, 3."
+          ],
+          "codeSnippet": "uint16_t encode_sliv(uint8_t S, uint8_t L) {\n    if (L == 0 || (S + L) > 14) return 0xFFFF; // Invalid\n    if ((L - 1) <= 7) {\n        return 14 * (L - 1) + S;\n    } else {\n        return 14 * (14 - L + 1) + (14 - 1 - S);\n    }\n}\n\nbool decode_sliv(uint16_t sliv, uint8_t& S, uint8_t& L) {\n    if (sliv > 127) return false;\n    uint8_t q = sliv / 14;\n    uint8_t r = sliv % 14;\n    if ((q + r) <= 13) {\n        L = q + 1;\n        S = r;\n    } else {\n        L = 14 - q + 1;\n        S = 14 - 1 - r;\n    }\n    return (S + L <= 14);\n}"
+        },
+        {
+          "id": "w4_t2",
+          "title": "Frequency Domain Resource Allocation: Type 0 vs Type 1 RIV",
+          "specClause": "3GPP TS 38.214 §5.1.2.2",
+          "explanation": "FDRA determines which Physical Resource Blocks (PRBs) carry PDSCH:\n- **Type 0 (Resource Block Group Bitmap)**: PRBs are clustered into RBGs of size P ∈ {2, 4, 8, 16}. A bitmap in DCI assigns individual RBGs (1 bit per RBG). Allows non-contiguous frequency-selective scheduling to exploit channel peaks at the cost of higher DCI bit overhead.\n- **Type 1 (Contiguous Resource Indication Value - RIV)**: Allocates a contiguous block of PRBs defined by starting PRB RB_start and length L_RBs.\n  - If (L_RBs - 1) ≤ ⌊N_BWP^size / 2⌋: RIV = N_BWP^size · (L_RBs - 1) + RB_start\n  - Else: RIV = N_BWP^size · (N_BWP^size - L_RBs + 1) + (N_BWP^size - 1 - RB_start)\nField size: ⌈log2(N_BWP · (N_BWP + 1) / 2)⌉ bits (e.g. 16 bits for 273 PRBs).",
+          "keyFormulas": [
+            "RIV bit width = ⌈log2(N_BWP(N_BWP+1)/2)⌉",
+            "RBG size P: Table 5.1.2.2.1-1 (Config 1 vs Config 2)",
+            "Contiguous PRB mapping reduces DCI signaling overhead"
+          ],
+          "memoryAids": [
+            "Type 0 is the selective cookie cutter (bitmap of groups); Type 1 is the continuous slice (RIV single block)."
+          ],
+          "pitfalls": [
+            "Assuming Type 0 RBGs are always uniform (the first and last RBGs in a BWP can be smaller due to carrier boundaries).",
+            "Applying Type 1 RIV formula with N_BWP size instead of active BWP size."
+          ],
+          "codeSnippet": "uint32_t encode_riv(uint32_t rb_start, uint32_t num_rbs, uint32_t bwp_size) {\n    if ((num_rbs - 1) <= (bwp_size / 2)) {\n        return bwp_size * (num_rbs - 1) + rb_start;\n    } else {\n        return bwp_size * (bwp_size - num_rbs + 1) + (bwp_size - 1 - rb_start);\n    }\n}"
+        },
+        {
+          "id": "w4_t3",
+          "title": "Exact Transport Block Size (TBS) Determination: 5-Step Algorithm",
+          "specClause": "3GPP TS 38.214 §5.1.3.2",
+          "explanation": "The 5-step mathematical procedure the MAC scheduler executes every slot to determine transport block size in bits:\n- **Step 1**: Resource Elements per PRB: N'_RE = 12 · N_symb^sh - N_DMRS^PRB - N_oh^PRB. Total REs: N_RE = min(156, N'_RE) · n_PRB.\n- **Step 2**: Unquantized Information Bits: N_info = N_RE · R · Q_m · ν (where R is target code rate, Q_m is modulation order, ν is layers).\n- **Step 3**: Small Transport Blocks (N_info ≤ 3824): Quantize using TS 38.214 Table 5.1.3.2-1.\n- **Step 4**: Large Transport Blocks (N_info > 3824): Compute exponent n = ⌊log2(N_info - 24)⌋ - 5, round N'_info = max(3840, 2^n · round((N_info - 24) / 2^n)).\n- **Step 5**: LDPC Code Block Segmentation & Parity: If R ≤ 1/4 ⇒ Base Graph 2 (K_cb = 3840). If R > 1/4 and N'_info > 8424 ⇒ Base Graph 1 (K_cb = 8448).\n  Code blocks C = ⌈(N'_info + 24) / (K_cb - 24)⌉.\n  Exact TBS = 8 · C · ⌈(N'_info + 24) / (8 · C)⌉ - 24 bits.",
+          "keyFormulas": [
+            "N'_RE = 12 · N_symb - N_DMRS - N_oh",
+            "N_RE = min(156, N'_RE) · n_PRB",
+            "N_info = N_RE · R · Q_m · ν",
+            "n = ⌊log2(N_info - 24)⌋ - 5",
+            "TBS = 8 · C · ⌈(N'_info + 24) / (8 · C)⌉ - 24"
+          ],
+          "memoryAids": [
+            "RE Count → Info Bits → Exponent Quantize → LDPC Base Graph Segment → Final Byte-Aligned TBS."
+          ],
+          "pitfalls": [
+            "Forgetting to cap N'_RE at 156 (RE limit per PRB).",
+            "Omitting the 24-bit CRC deduction before quantization.",
+            "Choosing Base Graph 1 when code rate R ≤ 1/4."
+          ],
+          "codeSnippet": "#include <cmath>\n#include <algorithm>\n#include <cstdint>\n\nuint32_t calculate_tbs(uint32_t n_prb, uint8_t n_symb, uint8_t n_dmrs, \n                      uint8_t q_m, double code_rate, uint8_t layers) {\n    uint32_t n_re_prime = 12 * n_symb - n_dmrs;\n    uint32_t n_re = std::min<uint32_t>(156, n_re_prime) * n_prb;\n    double n_info = n_re * code_rate * q_m * layers;\n    \n    if (n_info <= 3824.0) {\n        // Look up in TS 38.214 Table 5.1.3.2-1\n        return static_cast<uint32_t>(n_info); // Simplified lookup\n    }\n    \n    int n = static_cast<int>(std::floor(std::log2(n_info - 24.0))) - 5;\n    double step = std::pow(2.0, n);\n    uint32_t n_info_prime = std::max<uint32_t>(3840, \n        static_cast<uint32_t>(step * std::round((n_info - 24.0) / step)));\n        \n    uint32_t k_cb = (n_info_prime > 8424 && code_rate > 0.25) ? 8448 : 3840;\n    uint32_t c = (n_info_prime + 24 + (k_cb - 25)) / (k_cb - 24);\n    uint32_t tbs = 8 * c * ((n_info_prime + 24 + (8 * c - 1)) / (8 * c)) - 24;\n    return tbs;\n}"
+        },
+        {
+          "id": "w4_t4",
+          "title": "Limited Buffer Rate Matching (LBRM) & Soft Buffer Sizing",
+          "specClause": "3GPP TS 38.212 §5.4.2",
+          "explanation": "In high-throughput 5G NR, storing unpunctured soft LLR bits for up to 16 HARQ processes across multiple carriers would require prohibitive on-chip SRAM in the UE.\nLimited Buffer Rate Matching (LBRM) defines a soft buffer limit:\n- Maximum code block soft buffer size: N_cb = min(N_IR, N_ref), where N_IR is the soft buffer capacity for the process.\n- Circular buffer rate matching punctures systematic and parity bits when the required code rate exceeds channel limits.\n- LDPC Base Graph 1 supports information block size up to K = 8448 bits; Base Graph 2 supports up to K = 3840 bits.\n- Redundancy Versions (RV ∈ {0, 2, 3, 1}): RV0 transmits all systematic bits; RV2, RV3, and RV1 transmit parity bits with incremental redundancy.",
+          "keyFormulas": [
+            "K_cb = 8448 (BG1), K_cb = 3840 (BG2)",
+            "N_cb = min(N_IR, N_ref)",
+            "RV Sequence: 0 → 2 → 3 → 1"
+          ],
+          "memoryAids": [
+            "LBRM protects the chip from memory blowout! RV sequence 0-2-3-1: 0 has systematic data, 2/3/1 pump parity."
+          ],
+          "pitfalls": [
+            "Inverting the RV sequence (sending RV3 before RV2 severely degrades incremental redundancy combining gains).",
+            "Assuming LBRM is disabled by default (it is enabled for high-bandwidth carrier aggregation)."
+          ],
+          "codeSnippet": "// Standard 3GPP Rel-15 RV Cycle\nconstexpr uint8_t RV_CYCLE[4] = {0, 2, 3, 1};\n\nuint8_t get_next_rv(uint8_t transmission_count) {\n    return RV_CYCLE[transmission_count % 4];\n}"
+        }
+      ]
+    },
+    {
+      "week": 5,
+      "phase": 2,
+      "phaseTitle": "DL Physical Procedures & Resource Allocation",
+      "title": "NR DL HARQ Entity, Dynamic Timing & Codebooks",
+      "estimatedHours": 9,
+      "specs": [
+        "TS 38.321 §5.3",
+        "TS 38.213 §9.2.3",
+        "TS 38.214 §5.1.7"
+      ],
+      "summary": "Master asynchronous HARQ, dynamic K1 timing, NDI toggle semantics, Code Block Group (CBG) retransmissions, Type-1 Semi-Static HARQ codebook, and Type-2 Dynamic HARQ codebook with cDAI/tDAI.",
+      "deliverable": "C++ 16-process HARQ entity manager with CBG tracking, and Type-2 codebook generator with modulo-4 gap detection.",
+      "topics": [
+        {
+          "id": "w5_t1",
+          "title": "NR DL HARQ Entity: Asynchronous Mechanics & NDI Toggling",
+          "specClause": "3GPP TS 38.321 §5.3, TS 38.214 §5.1",
+          "explanation": "Unlike 4G LTE FDD's rigid 4 ms synchronous HARQ timeline, 5G NR implements fully asynchronous HARQ:\n- Up to 16 parallel HARQ processes per component carrier.\n- **Dynamic K1 Timing**: DCI format 1_0/1_1 explicitly instructs the UE when to report HARQ feedback via the 'PDSCH-to-HARQ_feedback timing indicator' field (K1 slots after PDSCH).\n- **New Data Indicator (NDI)**:\n  - If the NDI bit in DCI has TOGGLED relative to the previous transmission on that HARQ process ID ⇒ NEW DATA transmission. Soft buffer is cleared.\n  - If NDI has NOT toggled ⇒ RETRANSMISSION. UE combines received symbols with soft buffer.",
+          "keyFormulas": [
+            "PUCCH Slot = n_PDSCH + K1",
+            "Max HARQ Processes = 16 per carrier",
+            "NDI Toggled: New transmission; NDI Untoggled: Retransmission"
+          ],
+          "memoryAids": [
+            "4G was an express train stopping every 4 ms; 5G is an on-demand taxi where DCI sets the exact drop-off slot K1.",
+            "NDI Toggle = New data, NDI Same = Same data (Retransmission)."
+          ],
+          "pitfalls": [
+            "False NDI toggle due to missed DCI: if UE misses a DCI, it misses the grant; if next DCI has toggled NDI, UE discards previous retransmission data without realizing!",
+            "Assuming HARQ process IDs are sequential (asynchronous scheduling allows arbitrary process ordering)."
+          ],
+          "codeSnippet": "struct HarqProcess {\n    uint8_t  process_id;\n    uint8_t  last_ndi;\n    uint8_t  round;\n    bool     is_active;\n    \n    bool is_new_data(uint8_t received_ndi) {\n        if (!is_active) return true;\n        return (received_ndi != last_ndi);\n    }\n};"
+        },
+        {
+          "id": "w5_t2",
+          "title": "Code Block Group (CBG) Based Retransmissions",
+          "specClause": "3GPP TS 38.321 §5.3.2.2, TS 38.214 §5.1.7",
+          "explanation": "In gigabit 5G transmissions, a transport block is segmented into tens of LDPC code blocks (e.g. 24 blocks). In traditional TB-based HARQ, if even a single code block is corrupted, the entire 24-block transport block must be retransmitted over the air.\nWith CBG configuration (`maxCodeBlockGroupsPerTransportBlock` ∈ {2, 4, 6, 8}):\n- Code blocks are clustered into up to 8 CBGs.\n- The UE feeds back a multi-bit HARQ-ACK bitmap (1 bit per CBG).\n- On receiving NACK for CBG 3, gNodeB retransmits ONLY CBG 3 via the CBGTI field in DCI.\nSaves up to 75-80% radio bandwidth under high-BLER channel conditions!",
+          "keyFormulas": [
+            "CBG_count = min(M, C), where M ∈ {2, 4, 6, 8} and C is code block count",
+            "CBGTI (CBG Transmission Info): bitmap indicating retransmitted CBGs",
+            "CBGFI (CBG Flushing Out Info): 1 bit indicating if soft buffer should be flushed"
+          ],
+          "memoryAids": [
+            "Why return the entire textbook when only Chapter 3 has a typo? CBG retransmits only the corrupted chapters!"
+          ],
+          "pitfalls": [
+            "DCI bit overhead increases by up to 8 bits for CBGTI and 1 bit for CBGFI.",
+            "Ignoring CBGFI causing incorrect soft buffer combining."
+          ],
+          "codeSnippet": "struct CbgConfig {\n    uint8_t num_cbgs;\n    uint8_t cbg_ack_mask; // Bitmask of ACKs per CBG\n    \n    bool all_acknowledged() const {\n        uint8_t expected_mask = (1 << num_cbgs) - 1;\n        return (cbg_ack_mask & expected_mask) == expected_mask;\n    }\n};"
+        },
+        {
+          "id": "w5_t3",
+          "title": "Type-1 Semi-Static HARQ-ACK Codebook Determination",
+          "specClause": "3GPP TS 38.213 §9.2.3",
+          "explanation": "How the UE constructs the HARQ-ACK payload to transmit on PUCCH:\n- **Type-1 (Semi-Static) Codebook**:\n  - The UE evaluates all theoretical candidate PDSCH reception occasions that could report HARQ-ACK in the target PUCCH slot, based on RRC set of K1 values and TDRA SLIV table.\n  - If a candidate occasion was NOT scheduled by the gNodeB, the UE inserts a NACK.\n  - **Pro**: Invariant to missed DCIs (both gNodeB and UE agree on exact bit positions regardless of channel drops).\n  - **Con**: Inefficient overhead when traffic is sparse (e.g. sending 16 bits of NACKs when only 1 TB was scheduled).",
+          "keyFormulas": [
+            "Codebook size O_ACK = ∑_CC ∑_K1 M_candidate",
+            "Fixed grid indexing ensures alignment between UE and gNodeB"
+          ],
+          "memoryAids": [
+            "Semi-Static is the reserved seating chart: every seat is assigned beforehand. If you don't show up, your seat is marked absent (NACK)."
+          ],
+          "pitfalls": [
+            "High uplink PUCCH coding rate and coverage reduction in Carrier Aggregation due to bloated semi-static codebook size."
+          ],
+          "codeSnippet": "// Semi-static codebook slot checker\nbool is_candidate_occasion(uint8_t slot, const std::vector<uint8_t>& k1_set, uint8_t pucch_slot) {\n    for (uint8_t k1 : k1_set) {\n        if (slot + k1 == pucch_slot) return true;\n    }\n    return false;\n}"
+        },
+        {
+          "id": "w5_t4",
+          "title": "Type-2 Dynamic HARQ-ACK Codebook: cDAI & tDAI Mechanics",
+          "specClause": "3GPP TS 38.213 §9.2.3",
+          "explanation": "Dynamically sizes the HARQ-ACK payload to report ONLY the transmissions actually scheduled.\nUses two fields in DCI:\n- **Counter DAI (cDAI, 2 bits)**: Accumulates the count of scheduled grants up to the current serving cell.\n- **Total DAI (tDAI, 2 bits)**: Indicates the total count across all carriers up to the current monitoring occasion.\n- **Modulo-4 Arithmetic**: Values map to {1, 2, 3, 4} ≡ {00, 01, 10, 11}_2.\n- **Missed DCI Detection**: If UE receives cDAI = 1 and next cDAI = 3, it detects that DCI with cDAI = 2 was dropped, inserts NACK at position 2, preserving bit alignment!",
+          "keyFormulas": [
+            "V_DAI = (N - 1) mod 4 + 1",
+            "Missed DCI condition: (cDAI_curr - cDAI_prev - 1) mod 4 > 0",
+            "Payload size: strictly matches Total DAI count"
+          ],
+          "memoryAids": [
+            "cDAI is your ticket number in line; tDAI is the total number of tickets called today. If ticket 2 is missing between 1 and 3, ticket 2 was dropped!"
+          ],
+          "pitfalls": [
+            "In Carrier Aggregation, if the LAST scheduled DCI is lost, UE cannot detect it with cDAI alone — tDAI from other carriers is required to catch trailing losses."
+          ],
+          "codeSnippet": "// Type-2 DAI Gap Detector\nuint8_t detect_missed_grants(uint8_t prev_cdai, uint8_t curr_cdai) {\n    // Both 1-based (1, 2, 3, 4)\n    uint8_t diff = (curr_cdai + 4 - prev_cdai) % 4;\n    if (diff == 0) return 0;\n    return diff - 1; // Number of lost grants between them\n}"
+        }
+      ]
+    },
+    {
+      "week": 6,
+      "phase": 2,
+      "phaseTitle": "DL Physical Procedures & Resource Allocation",
+      "title": "Beam Management, TCI States, QCL & Systems",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 38.214 §5.1.5, §5.2.2",
+        "TS 38.321 §5.17",
+        "ISO C++17/20"
+      ],
+      "summary": "Master massive MIMO beam management (P-1, P-2, P-3), Beam Failure Recovery (BFR), TCI states, QCL Types A/B/C/D, Outer Loop Link Adaptation (OLLA), and lock-free SPSC ring buffers in modern C++.",
+      "deliverable": "C++ OLLA link adapter, TCI state manager, and lock-free SPSC queue with acquire/release memory semantics.",
+      "topics": [
+        {
+          "id": "w6_t1",
+          "title": "Beam Management: P-1/P-2/P-3 Sweeping & Beam Failure Recovery",
+          "specClause": "3GPP TS 38.214 §5.2, TS 38.321 §5.17",
+          "explanation": "Massive MIMO and mmWave directional transmissions:\n- **P-1 (Beam Selection)**: Simultaneous Tx and Rx sweeping across wide SSB/CSI-RS beams for initial UE pairing.\n- **P-2 (gNodeB Beam Refinement)**: Narrow gNodeB beam sweeping with fixed UE Rx beam.\n- **P-3 (UE Beam Refinement)**: Fixed gNodeB Tx beam with narrow UE Rx beam sweeping.\n\n**Beam Failure Recovery (BFR)**:\nWhen all candidate serving beams fall below threshold Q_out (hypothetical PDCCH BLER ≥ 10%), `beamFailureInstanceMaxCount` triggers BFR. The UE selects a new candidate SSB/CSI-RS with L1-RSRP ≥ Q_in, transmits a dedicated PRACH preamble on the new beam, and monitors a dedicated BFR search space.",
+          "keyFormulas": [
+            "L1-RSRP ≥ rsrp-ThresholdSSB",
+            "Timer: beamFailureRecoveryTimer",
+            "P-1 = Coarse pair, P-2 = gNodeB fine, P-3 = UE fine"
+          ],
+          "memoryAids": [
+            "P-1 Pairs you, P-2 Pinpoints base station beam, P-3 Pinpoints UE beam. BFR is your emergency reboot when beams drop."
+          ],
+          "pitfalls": [
+            "Slow BFR timer configuration causing prolonged radio link failure (RLF).",
+            "Scheduling PDSCH on a failed beam before BFR completes."
+          ],
+          "codeSnippet": "struct BeamContext {\n    uint8_t ssb_index;\n    int16_t l1_rsrp_dbm;\n    bool    is_failed;\n    \n    void update_measurement(int16_t rsrp, int16_t threshold_qout) {\n        l1_rsrp_dbm = rsrp;\n        is_failed = (rsrp < threshold_qout);\n    }\n};"
+        },
+        {
+          "id": "w6_t2",
+          "title": "TCI States & Quasi-Co-Location (QCL) Types A/B/C/D",
+          "specClause": "3GPP TS 38.214 §5.1.5",
+          "explanation": "QCL defines when channel properties of one reference signal can be used to estimate another:\n- **QCL-TypeA**: Doppler shift, Doppler spread, Average delay, Delay spread (full multipath).\n- **QCL-TypeB**: Doppler shift, Doppler spread.\n- **QCL-TypeC**: Doppler shift, Average delay.\n- **QCL-TypeD**: **Spatial Rx parameter** (Angle of Arrival / same Rx beamforming weights for mmWave!).\n\n**TCI State Signaling**:\n- RRC configures up to 128 TCI states.\n- MAC CE activates a subset of up to 8 active TCI states.\n- DCI 1_1 uses a 3-bit field to dynamically switch between the 8 active beams slot-by-slot.",
+          "keyFormulas": [
+            "TCI field in DCI: 3 bits (≤ 8 active states)",
+            "MAC CE activation bitmap: 8 octets",
+            "QCL-TypeD = Spatial Rx beamforming weights"
+          ],
+          "memoryAids": [
+            "Type A: All multi-path & Doppler. Type D: Direction! (Spatial Rx beam).",
+            "RRC configures 128, MAC CE activates 8, DCI picks 1."
+          ],
+          "pitfalls": [
+            "Scheduling PDSCH with Type D on FR1 where spatial Rx beamforming is not applicable.",
+            "Scheduling before MAC CE activation completes."
+          ],
+          "codeSnippet": "struct TciState {\n    uint8_t tci_id;\n    uint8_t source_rs_type; // 0=SSB, 1=CSI-RS\n    uint8_t source_rs_id;\n    uint8_t qcl_type;       // 0=A, 1=B, 2=C, 3=D\n};"
+        },
+        {
+          "id": "w6_t3",
+          "title": "Outer Loop Link Adaptation (OLLA) & CQI Processing",
+          "specClause": "3GPP TS 38.214 §5.2.2 & Scheduler Algorithms",
+          "explanation": "Inner Loop Link Adaptation maps periodic UE CQI reports (1..15) to spectral efficiency and MCS (0..28) based on static AWGN lookup tables.\nOuter Loop Link Adaptation (OLLA) dynamically adjusts effective SINR:\nSINR_eff = SINR_CQI - Δ_OLLA\n\n**Closed-Loop Step Dynamics**:\n- On HARQ ACK: Δ_OLLA = Δ_OLLA - Δ_down\n- On HARQ NACK: Δ_OLLA = Δ_OLLA + Δ_up\nTo converge to target 10% BLER:\nΔ_down = Δ_up · (BLER_target / (1 - BLER_target)) = Δ_up · (0.10 / 0.90) = Δ_up / 9.\nExample: Δ_up = 1.0 dB implies Δ_down = 0.111 dB.",
+          "keyFormulas": [
+            "SINR_eff = SINR_CQI - Δ_OLLA",
+            "Step ratio: Δ_down = Δ_up · (BLER_target / (1 - BLER_target))",
+            "Target BLER = 10%"
+          ],
+          "memoryAids": [
+            "Step up fast on NACK (+1 dB), step down slowly on ACK (-0.11 dB). Ratio 1 to 9 guarantees 10% target BLER!"
+          ],
+          "pitfalls": [
+            "Setting Δ_up too large causes massive MCS oscillations.",
+            "Failing to clamp Δ_OLLA between [-6 dB, +6 dB] leads to divergence."
+          ],
+          "codeSnippet": "class OllaController {\n    float delta_olla_db_{0.0f};\n    const float delta_up_db_{1.0f};\n    const float delta_down_db_{1.0f / 9.0f}; // 10% target BLER\n\npublic:\n    void on_harq_feedback(bool is_ack) {\n        if (is_ack) {\n            delta_olla_db_ -= delta_down_db_;\n        } else {\n            delta_olla_db_ += delta_up_db_;\n        }\n        // Clamp to prevent unbounded drift\n        delta_olla_db_ = std::clamp(delta_olla_db_, -6.0f, 6.0f);\n    }\n\n    float get_offset() const { return delta_olla_db_; }\n};"
+        },
+        {
+          "id": "w6_t4",
+          "title": "Low-Level Systems: Lock-Free SPSC Ring Buffer with Acquire/Release",
+          "specClause": "Modern Systems & Memory Ordering / ISO C++17/20",
+          "explanation": "Multi-threaded baseband communication between PHY receiver threads and MAC scheduler threads cannot use mutexes (`std::mutex`) due to kernel context-switch latency (~2-5 µs) and risk of priority inversion.\nSingle-Producer Single-Consumer (SPSC) ring buffers with `std::atomic` and `memory_order_acquire` / `memory_order_release` allow zero-lock communication.\n\n**Why Acquire/Release instead of `seq_cst`**:\n- `seq_cst` forces expensive CPU bus-lock cycles (e.g. `MFENCE` on x86, `DMB ISH` on ARM).\n- Acquire/release provides pairwise synchronization: memory writes preceding the release store in producer are guaranteed to be visible to the consumer after its acquire load.",
+          "keyFormulas": [
+            "Capacity must be power of two: (Capacity & (Capacity - 1)) == 0",
+            "Index masking: head & (Capacity - 1)",
+            "Acquire/Release creates pairwise synchronization edge"
+          ],
+          "memoryAids": [
+            "Release seals the envelope (writes finished). Acquire opens the envelope (reads begin). Zero mutexes, zero context switches!"
+          ],
+          "pitfalls": [
+            "Putting head and tail in the same cache line (causes devastating false sharing).",
+            "Using non-power-of-two capacity requiring expensive modulo division."
+          ],
+          "codeSnippet": "#include <atomic>\n#include <cstdint>\n#include <optional>\n\ntemplate <typename T, size_t Capacity>\nclass LockFreeSPSCQueue {\n    static_assert((Capacity & (Capacity - 1)) == 0, \"Capacity must be power of two!\");\n    \n    alignas(64) std::atomic<size_t> head_{0}; // Written only by Producer\n    alignas(64) std::atomic<size_t> tail_{0}; // Written only by Consumer\n    alignas(64) T ring_buffer_[Capacity];\n\npublic:\n    bool enqueue(const T& item) {\n        const size_t current_head = head_.load(std::memory_order_relaxed);\n        const size_t current_tail = tail_.load(std::memory_order_acquire);\n        \n        if ((current_head - current_tail) >= Capacity) return false; // Full\n        \n        ring_buffer_[current_head & (Capacity - 1)] = item;\n        head_.store(current_head + 1, std::memory_order_release);\n        return true;\n    }\n\n    std::optional<T> dequeue() {\n        const size_t current_tail = tail_.load(std::memory_order_relaxed);\n        const size_t current_head = head_.load(std::memory_order_acquire);\n        \n        if (current_head == current_tail) return std::nullopt; // Empty\n        \n        T item = ring_buffer_[current_tail & (Capacity - 1)];\n        tail_.store(current_tail + 1, std::memory_order_release);\n        return item;\n    }\n};"
+        }
+      ]
+    },
+    {
+      "week": 7,
+      "phase": 3,
+      "phaseTitle": "Multi-Carrier & Dual Connectivity Integration",
+      "title": "NR Carrier Aggregation, CIF & Mixed Numerologies",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 38.300 §6.4",
+        "TS 38.321 §5.13",
+        "TS 38.213 §10.1"
+      ],
+      "summary": "Master Carrier Aggregation architecture (PCell vs SCell), SCell activation/deactivation MAC CE, cross-carrier scheduling with CIF (TS 38.213 §10.1), and mixed numerology slot alignments.",
+      "deliverable": "C++ SCell state machine, cross-carrier CIF grant mapper, and mixed numerology slot translator.",
+      "topics": [
+        {
+          "id": "w7_t1",
+          "title": "NR Carrier Aggregation Architecture: PCell, PSCell & SCells",
+          "specClause": "3GPP TS 38.300 §6.4, TS 38.321 §5.13",
+          "explanation": "Carrier Aggregation aggregates multiple component carriers (up to 16 in NR) to deliver multi-gigabit throughput:\n- **Single MAC Entity**: A single MAC entity at the gNodeB and UE controls scheduling across all aggregated CCs.\n- **Primary Cell (PCell)**: Handles RRC connection, PUCCH transmission (by default), security, and initial access. Never deactivated.\n- **Secondary Cells (SCells)**: Provide supplementary DL and/or UL data capacity.\n- **SCell State Machine**: DEACTIVATED ↔ ACTIVATED ↔ DORMANT (Rel-16).",
+          "keyFormulas": [
+            "Max aggregated carriers = 16 CCs",
+            "Max aggregated bandwidth = 16 · 400 MHz = 6.4 GHz (FR2)",
+            "PCell is the persistent anchor"
+          ],
+          "memoryAids": [
+            "PCell is the Anchor (never deactivated); SCells are the Boosters (activated when heavy cargo arrives)."
+          ],
+          "pitfalls": [
+            "Attempting to deactivate the PCell (PCell cannot be deactivated).",
+            "Assuming SCell can transmit PUCCH without explicit PUCCH-SCell configuration."
+          ],
+          "codeSnippet": "struct CarrierConfig {\n    uint8_t  cell_index;\n    bool     is_pcell;\n    uint32_t dl_bandwidth_mhz;\n    uint8_t  mu;\n};"
+        },
+        {
+          "id": "w7_t2",
+          "title": "SCell Activation/Deactivation State Machine & MAC CE",
+          "specClause": "3GPP TS 38.321 §5.13",
+          "explanation": "SCell Activation/Deactivation MAC CE contains a 1-octet (for SCell index 1-7) or 4-octet (for SCell index 1-31) bitmap:\n- Bit C_i = 1 activates SCell i; C_i = 0 deactivates it.\n- Timer: `sCellDeactivationTimer` per SCell. Reset upon receiving PDCCH grant on that SCell.\n- **Upon Deactivation**: UE stops PDCCH monitoring on SCell, stops SRS transmissions, stops CSI reporting for SCell, flushes all HARQ buffers for that SCell, and clears configured grants. Power saving is significant, but reactivation latency is 24-34 ms.",
+          "keyFormulas": [
+            "Bitmap: C_i = 1 (Activate), C_i = 0 (Deactivate)",
+            "Reactivation delay: 24 to 34 ms",
+            "Timer: sCellDeactivationTimer (20 ms to 1280 ms)"
+          ],
+          "memoryAids": [
+            "Bit 1 turns the SCell ON, Bit 0 turns it OFF. Timer resets on every grant; silence puts it to sleep."
+          ],
+          "pitfalls": [
+            "Failing to flush HARQ buffers on SCell deactivation leads to stale soft-combining errors when the cell is reactivated."
+          ],
+          "codeSnippet": "void process_scell_act_deact_ce(uint8_t bitmap, SCellState scells[7]) {\n    for (int i = 0; i < 7; i++) {\n        bool activate = (bitmap & (1 << (i + 1))) != 0;\n        if (activate) scells[i].transition_to_active();\n        else scells[i].is_activated = false;\n    }\n}"
+        },
+        {
+          "id": "w7_t3",
+          "title": "Cross-Carrier Scheduling with CIF (TS 38.213 §10.1)",
+          "specClause": "3GPP TS 38.213 §10.1, TS 38.212 §7.3",
+          "explanation": "In Carrier Aggregation, self-scheduling allows each carrier's PDCCH to schedule its own PDSCH. Cross-carrier scheduling allows PDCCH transmitted on one carrier (e.g. PCell at lower frequency with better coverage) to schedule PDSCH on another carrier (e.g. SCell at higher frequency).\n- **Carrier Indicator Field (CIF)**: A 3-bit field prepended to DCI formats 0_1 and 1_1, identifying the target serving cell index (CIF ∈ [0, 7]).\n- **DCI Size Alignment**: DCI sizes across scheduled carriers are aligned with zero-padding to minimize blind decoding attempts (max 4 unique DCI sizes monitored per slot).",
+          "keyFormulas": [
+            "CIF field size = 3 bits (≤ 8 carriers)",
+            "DCI size budget: max 4 unique sizes monitored per slot to protect UE blind decodes"
+          ],
+          "memoryAids": [
+            "CIF is the shipping label: PDCCH printed on Carrier A, package delivered on Carrier B."
+          ],
+          "pitfalls": [
+            "DCI format 1_0 cannot carry CIF (fallback DCI is strictly self-scheduling).",
+            "Exceeding the 4-DCI-size blind decode limit."
+          ],
+          "codeSnippet": "struct DciFormat1_1 {\n    uint8_t  cif; // 3-bit Carrier Indicator Field\n    uint16_t riv;\n    uint8_t  sliv;\n    uint8_t  mcs;\n    uint8_t  harq_pid;\n    uint8_t  ndi;\n    uint8_t  rv;\n};"
+        },
+        {
+          "id": "w7_t4",
+          "title": "Mixed Numerology Cross-Carrier Scheduling Mechanics",
+          "specClause": "3GPP TS 38.214 §5.1.2.1, TS 38.213 §10.1",
+          "explanation": "When cross-carrier scheduling across different numerologies (e.g. PCell at μ = 0, SCell at μ = 1):\n- **Case 1 (μ_PDCCH < μ_PDSCH)**: 1 PDCCH slot covers 2 PDSCH slots. DCI indicates which sub-slot (2n or 2n+1) is scheduled.\n- **Case 2 (μ_PDCCH > μ_PDSCH)**: Multiple PDCCH slots fall within one PDSCH slot. Scheduler must avoid overlapping allocations.\n- **Processing Time (Np,1)**: Time between PDCCH end and PDSCH start must satisfy UE preparation time Np,1 based on min(μ_PDCCH, μ_PDSCH).",
+          "keyFormulas": [
+            "Slot Ratio = 2^(μ_PDSCH - μ_PDCCH)",
+            "Preparation Timeline: T_prep ≥ N_p,1 · T_slot^min"
+          ],
+          "memoryAids": [
+            "Fast schedules slow with ease; slow schedules fast by picking which half-slot to hit!"
+          ],
+          "pitfalls": [
+            "Violating Np,1 processing time: scheduling PDSCH too close to PDCCH on higher numerologies causes UE demodulation abort."
+          ],
+          "codeSnippet": "uint32_t map_subslot(uint32_t pdcch_slot, uint8_t mu_pdcch, uint8_t mu_pdsch, uint8_t subslot_idx) {\n    uint32_t ratio = 1 << (mu_pdsch - mu_pdcch);\n    return pdcch_slot * ratio + subslot_idx;\n}"
+        }
+      ]
+    },
+    {
+      "week": 8,
+      "phase": 3,
+      "phaseTitle": "Multi-Carrier & Dual Connectivity Integration",
+      "title": "Multi-RAT Dual Connectivity (EN-DC Option 3x & NR-DC)",
+      "estimatedHours": 8,
+      "specs": [
+        "TS 37.340",
+        "TS 38.300 §6.5",
+        "TS 38.425 DDDS"
+      ],
+      "summary": "Master EN-DC Option 3x Non-Standalone architecture, split bearer data flow at NR PDCP, TS 38.425 Downlink Data Delivery Status (DDDS) flow control, and inter-site CA coordination using ML.",
+      "deliverable": "C++ TS 38.425 DDDS frame serializer, and real-time PUCCH allocation predictor.",
+      "topics": [
+        {
+          "id": "w8_t1",
+          "title": "EN-DC Option 3x Architecture: MeNB, SgNB & Bearers",
+          "specClause": "3GPP TS 37.340, TS 38.300 §6.5",
+          "explanation": "E-UTRA-NR Dual Connectivity (EN-DC Option 3x) is the dominant Non-Standalone (NSA) 5G deployment model:\n1. **Control Plane**: Master eNodeB (MeNB, 4G LTE) anchors S1-MME to the EPC. SgNB (5G NR) coordinates with MeNB over X2-C.\n2. **User Plane**: S1-U user plane traffic from the Serving Gateway terminates directly at the 5G SgNB.\n3. **SCG Split Bearer Flow**:\n   - Packets enter NR PDCP at the SgNB, where PDCP Sequence Numbers are assigned.\n   - SgNB splits traffic: sending high-throughput chunks directly over 5G RLC/MAC/PHY, and routing secondary chunks over the X2-U interface to the MeNB for 4G LTE transmission.",
+          "keyFormulas": [
+            "Control Anchor = 4G MeNB (S1-C)",
+            "Data Anchor = 5G SgNB (S1-U to NR PDCP)",
+            "Bearer Types: MCG Bearer, SCG Bearer, Split Bearer"
+          ],
+          "memoryAids": [
+            "Option 3x: 5G SgNB holds the steering wheel for data (NR PDCP), while 4G MeNB holds the anchor for signaling."
+          ],
+          "pitfalls": [
+            "Confusing Option 3 (data terminates at 4G MeNB and saturates 4G backhaul) with Option 3x (data terminates at 5G SgNB)."
+          ],
+          "codeSnippet": "enum class BearerType : uint8_t {\n    MCG_BEARER   = 0, // 4G LTE only\n    SCG_BEARER   = 1, // 5G NR only\n    SPLIT_BEARER = 2  // NR PDCP split across 4G and 5G\n};"
+        },
+        {
+          "id": "w8_t2",
+          "title": "Split Bearer Data Flow at NR PDCP & TS 38.425 DDDS",
+          "specClause": "3GPP TS 38.425 (NR User Plane Protocol)",
+          "explanation": "In Option 3x SCG split bearer, NR PDCP at the SgNB receives downlink IP packets, assigns PDCP SNs, and splits traffic between 5G radio and X2-U to the MeNB.\nTo prevent MeNB buffers from overflowing or underflowing, 3GPP TS 38.425 defines the Downlink Data Delivery Status (DDDS) frame format:\n- MeNB sends periodic feedback to SgNB reporting:\n  1. 'Highest Successfully Delivered PDCP SN'\n  2. 'Desired Buffer Size' in bytes\n  3. 'Lost Packet Range'\nSgNB adjusts forwarding rate dynamically using token-bucket flow control.",
+          "keyFormulas": [
+            "DDDS Frame Type = 1 (User Plane Feedback)",
+            "Flow Control Rate: Rate_target = Desired_Buffer_Size / RTT_X2"
+          ],
+          "memoryAids": [
+            "DDDS is the flow control valve between 5G and 4G: 'I have 50 KB space left, send me more' or 'Stop, I am choked!'"
+          ],
+          "pitfalls": [
+            "Slow X2-U feedback causing packet out-of-order reordering at UE and TCP throughput collapse.",
+            "Assuming LTE PDCP can handle NR split (NR PDCP must be used)."
+          ],
+          "codeSnippet": "struct DddsFrame {\n    uint8_t  pdu_type;                // Type 1\n    uint32_t highest_delivered_pdcp_sn;\n    uint32_t desired_buffer_size_bytes;\n    uint16_t num_lost_packets;\n};"
+        },
+        {
+          "id": "w8_t3",
+          "title": "NR-DC Architecture & Multi-Node Coordination",
+          "specClause": "3GPP TS 37.340 §4.3, TS 38.300 §6.5",
+          "explanation": "NR Dual Connectivity connects a UE simultaneously to two separate 5G gNodeBs: Master Node (MN) running FR1 sub-6 GHz and Secondary Node (SN) running FR2 mmWave, connected to a 5G Core (5GC).\n- **Difference between CA and DC**:\n  - CA: Single MAC entity, tightly coupled baseband, microsecond-level synchronization.\n  - DC: Two independent MAC entities with separate schedulers, operating over non-ideal backhaul with millisecond latency.\nEach cell group maintains its own BWP configurations, HARQ entities, and PRACH resources.",
+          "keyFormulas": [
+            "Throughput_total = Throughput_MN + Throughput_SN",
+            "Backhaul latency: 10-20 ms (Xn non-ideal)"
+          ],
+          "memoryAids": [
+            "CA is one brain controlling two hands; DC is two distinct brains coordinating via phone calls."
+          ],
+          "pitfalls": [
+            "Attempting tight subframe-by-subframe cross-carrier scheduling across DC cell groups (impossible due to Xn backhaul latency)."
+          ],
+          "codeSnippet": "struct DualConnectivityUeContext {\n    uint32_t ue_id;\n    uint8_t  mcg_cell_id;\n    uint8_t  scg_cell_id;\n    bool     is_nr_dc;\n};"
+        },
+        {
+          "id": "w8_t4",
+          "title": "Inter-Site CA Coordination over Non-Ideal Backhaul & ML",
+          "specClause": "Machine Learning in L2 Architecture / Candidate Research",
+          "explanation": "When Carrier Aggregation spans geographically separated sites (Inter-Site CA) connected over non-ideal IP backhaul (10-20 ms delay), PCell must allocate PUCCH resources for SCell HARQ-ACK without real-time visibility into SCell's per-slot scheduling decisions.\n- Static allocation wastes 58% of uplink PUCCH capacity; reactive allocation starves SCell.\n- **Machine Learning Solution (developed by Akhzar Farhan at IISc/Samsung)**:\n  - Deploying an ultra-compact Treelite compiled decision tree (~280 KB native C binary) on PCell MAC.\n  - Predicts SCell scheduling probability in **0.42 ms** based on historical buffer depth and flow variance.\n  - Raised scheduling hit rate to 91% and cut PUCCH resource waste to 6.4%!",
+          "keyFormulas": [
+            "Inference latency: T_inf = 0.42 ms < 1.0 ms TTI",
+            "Memory footprint: ~280 KB SRAM",
+            "Hit rate boost: 42% → 91%"
+          ],
+          "memoryAids": [
+            "Predict before you allocate! Machine Learning eliminates the blind spot caused by 15 ms backhaul lag."
+          ],
+          "pitfalls": [
+            "Deploying heavy Python/PyTorch inference engines inside the real-time scheduling loop (violates deterministic sub-millisecond execution)."
+          ],
+          "codeSnippet": "// Ultra-fast C predictor compiled via Treelite\nextern \"C\" float predict_scell_schedule_prob(const float* features, int num_features);\n\nbool should_allocate_pucch_format3(const float* buffer_features) {\n    float prob = predict_scell_schedule_prob(buffer_features, 8);\n    return (prob > 0.65f); // 65% confidence threshold\n}"
+        }
+      ]
+    },
+    {
+      "week": 9,
+      "phase": 4,
+      "phaseTitle": "O-RAN, Open Stacks & System Design Mastery",
+      "title": "O-RAN Split 7-2x, SCF FAPI & Open-Source Stacks",
+      "estimatedHours": 8,
+      "specs": [
+        "O-RAN WG4 Fronthaul",
+        "SCF 222 v10.02",
+        "OpenAirInterface",
+        "srsRAN"
+      ],
+      "summary": "Master O-RAN Split 7-2x architecture (C/U/S/M-Planes), Small Cell Forum FAPI interface messages, and code walkthroughs of OpenAirInterface (gNB_scheduler_dlsch.c) and srsRAN (mac_dl_processor.cc).",
+      "deliverable": "C++ FAPI message structure serializer, and OAI scheduler code analysis report.",
+      "topics": [
+        {
+          "id": "w9_t1",
+          "title": "O-RAN Functional Split 7-2x Architecture: O-DU vs O-RU",
+          "specClause": "O-RAN Alliance Working Group 4 (Fronthaul Interface)",
+          "explanation": "Disaggregation of the base station into O-CU (RRC/PDCP), O-DU (RLC/MAC/High-PHY), and O-RU (Low-PHY/RF):\n- **Split 7-2x Boundary**: High-PHY (RE mapping, FFT/IFFT, modulation, LDPC coding) resides in the O-DU; Low-PHY (digital beamforming, PRACH filtering, DAC/ADC) resides in the O-RU.\n- **The 4 Planes**:\n  1. **Control Plane (C-Plane)**: Scheduling commands, PRB allocations, beamforming weights.\n  2. **User Plane (U-Plane)**: Frequency-domain IQ data transported over eCPRI.\n  3. **Synchronization Plane (S-Plane)**: IEEE 1588 PTP nanosecond-precision timing.\n  4. **Management Plane (M-Plane)**: NETCONF/YANG configuration of O-RU parameters.",
+          "keyFormulas": [
+            "Fronthaul compression: Transmits frequency-domain IQ samples, reducing bandwidth from ~40 Gbps to ~10 Gbps for 100 MHz 64T64R",
+            "Timing accuracy: S-Plane synchronization within ±130 ns"
+          ],
+          "memoryAids": [
+            "Split 7-2x: O-DU thinks (MAC & Coding); O-RU radiates (Antennas & Beams). eCPRI connects them."
+          ],
+          "pitfalls": [
+            "Assuming Split 7-2x sends time-domain samples (it sends frequency-domain unmodulated/modulated symbols).",
+            "Jitter on S-Plane violating 130 ns time alignment."
+          ],
+          "codeSnippet": "struct EcPriHeader {\n    uint8_t  protocol_rev;\n    uint8_t  message_type; // 0=IQ data, 2=RTC Control\n    uint16_t payload_size;\n    uint16_t pc_id;        // Packet Component ID\n    uint16_t seq_id;       // Sequence ID\n};"
+        },
+        {
+          "id": "w9_t2",
+          "title": "Small Cell Forum FAPI Interface (SCF 222 v10.02)",
+          "specClause": "Small Cell Forum FAPI Technical Report (SCF 222 v10.02)",
+          "explanation": "Standardized software API between Layer 2 (MAC) and Layer 1 (PHY) baseband firmware.\nKey Message Flows:\n- `DL_TTI.request`: Sent by MAC to PHY every slot. Contains resource assignments for PDCCH, PDSCH, and CSI-RS (SLIV, PRBs, MCS, precoding).\n- `TX_Data.request`: Contains the actual MAC PDU payload bytes to be modulated and transmitted.\n- `UL_TTI.request`: Instructs PHY which PUSCH, PUCCH, and PRACH resources to listen for in the upcoming slot.\n- `UCI.indication`: Delivers decoded Uplink Control Information (HARQ ACK/NACK, CQI, PMI, RI) from PHY to MAC.",
+          "keyFormulas": [
+            "Slot dispatch pipeline: MAC prepares DL_TTI.request + TX_Data.request at slot n - k so PHY can execute DMA before slot n",
+            "SCF 222 defines exact byte offsets for interoperability"
+          ],
+          "memoryAids": [
+            "DL_TTI is the blueprint; TX_Data is the brick. UCI is the customer review (ACK/NACK) coming back."
+          ],
+          "pitfalls": [
+            "Sending TX_Data.request without matching PDU count in DL_TTI.request (causes baseband crash / buffer desync)."
+          ],
+          "codeSnippet": "struct FapiDlTtiRequest {\n    uint16_t sfn;\n    uint16_t slot;\n    uint8_t  num_pdus;\n    // PDU descriptors follow in contiguous memory\n};\n\nstruct FapiTxDataRequest {\n    uint16_t sfn;\n    uint16_t slot;\n    uint8_t  num_pdus;\n    // Payload byte pointers follow\n};"
+        },
+        {
+          "id": "w9_t3",
+          "title": "OpenAirInterface (OAI) gNodeB Scheduler: `gNB_scheduler_dlsch.c`",
+          "specClause": "OpenAirInterface 5G NR Software Architecture",
+          "explanation": "Deep dive into open-source 5G baseband codebase OpenAirInterface (OAI):\nKey source file: `openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_dlsch.c`.\n- **Execution Flow**:\n  1. Entrypoint `nr_schedule_ue_spec()` triggered on each slot tick by timer or L1 interrupt.\n  2. Calls `nr_fill_DLSCH_dci()`: encodes DCI format 1_1 with RIV, SLIV, MCS, and HARQ process ID.\n  3. Calls `nr_generate_dlsch_pdu()`: pulls data from RLC buffers, encodes MAC subheaders, and places them into the FAPI TX PDU buffer.\n  4. Tracks HARQ state in `NR_UE_harq_t`: updates round count, toggles NDI, and stores redundancy version.",
+          "keyFormulas": [
+            "OAI Function Chain: nr_schedule_response() → nr_schedule_ue_spec() → nr_fill_DLSCH_dci() → nr_generate_dlsch_pdu()"
+          ],
+          "memoryAids": [
+            "Inspect OAI to see 3GPP specs in action: RIV, SLIV, and FAPI are real C structs, not abstract concepts."
+          ],
+          "pitfalls": [
+            "Race conditions between L1 RX thread and scheduler thread if mutex locking around NR_UE_info_t is modified improperly."
+          ],
+          "codeSnippet": "// Excerpt from OAI gNB_scheduler_dlsch.c logic:\nvoid nr_fill_dlsch_dci(dci_pdu_rel15_t *dci_pdu, uint16_t rnti, uint8_t harq_pid, \n                       uint8_t ndi, uint8_t rv, uint16_t riv, uint8_t sliv, uint8_t mcs) {\n    dci_pdu->frequency_domain_assignment.val = riv;\n    dci_pdu->time_domain_assignment.val = sliv;\n    dci_pdu->mcs = mcs;\n    dci_pdu->harq_pid = harq_pid;\n    dci_pdu->ndi = ndi;\n    dci_pdu->rv = rv;\n}"
+        },
+        {
+          "id": "w9_t4",
+          "title": "srsRAN 5G Architecture: `mac_dl_processor.cc` & Pipelining",
+          "specClause": "srsRAN Project 5G Architecture",
+          "explanation": "srsRAN Project is a modular, high-performance C++ 5G baseband stack.\nKey source file: `lib/src/mac/mac_dl_processor.cc`.\n- **Software Highlights**:\n  - Zero dynamic memory allocation in the fast path: uses pre-allocated object pools and intrusive pointer reference counting.\n  - Multi-threaded slot pipelining: Core 1 processes slot n MAC scheduling, Core 2 executes slot n-1 L1 modulation, Core 3 handles slot n+1 user metric sorting.\n  - Lock-free message passing using bounded ring buffers.\n  - Clean separation between RRC configuration layer and real-time MAC worker loops.",
+          "keyFormulas": [
+            "Pipeline: 3-stage worker pool maintains 100% CPU utilization across multi-core server processors"
+          ],
+          "memoryAids": [
+            "srsRAN is modern clean C++: object pools, intrusive pointers, and multi-stage pipelining."
+          ],
+          "pitfalls": [
+            "Missing memory barriers when passing task descriptors between worker threads causes stale slot configurations."
+          ],
+          "codeSnippet": "// srsRAN slot pipelining pattern\nclass MacDlProcessor {\npublic:\n    void process_slot(uint32_t slot_idx) {\n        collect_uci_feedback(slot_idx);\n        sort_candidate_users(slot_idx);\n        allocate_resources(slot_idx);\n        dispatch_fapi_pdus(slot_idx);\n    }\n};"
+        }
+      ]
+    },
+    {
+      "week": 10,
+      "phase": 4,
+      "phaseTitle": "O-RAN, Open Stacks & System Design Mastery",
+      "title": "Diagnostic Field Log Triage, System Design & Interview Mastery",
+      "estimatedHours": 8,
+      "specs": [
+        "Qualcomm QXDM",
+        "Field Debugging",
+        "German Telecom Market"
+      ],
+      "summary": "Master commercial field debugging using Qualcomm QXDM diagnostic packets, execute the 4-step HARQ NACK storm root cause decision tree, review the 125 µs scheduler system design, and master candidate positioning for Ericsson Germany and European employers.",
+      "deliverable": "QXDM packet decoding cheat sheet, HARQ NACK storm diagnostic decision tree, and German telecom CV narrative.",
+      "topics": [
+        {
+          "id": "w10_t1",
+          "title": "Qualcomm QXDM Log Analysis Playbook & Packet Codes",
+          "specClause": "Qualcomm Diagnostic Protocol / 3GPP Field Debugging",
+          "explanation": "How tier-1 modem and network engineers debug commercial issues:\n- `0xB887` (**NR5G MAC PDSCH Status**): Real-time TB size, MIMO layers, modulation order (QPSK to 256QAM), and HARQ outcome (ACK/NACK/DTX).\n- `0xB883` (**NR5G MAC UL Schedule Report**): Real-time UL grants, PUSCH TBS, and BSR reporting.\n- `0xB821` (**NR5G RRC OTA Packet**): Complete ASN.1 decoded control messages (`RRCReconfiguration`, `ServingCellConfig`, `BWP-Downlink`).\n- `0xB825` (**NR5G RRC Configuration Info**): Active cell groups, bearer mappings.\n- `0xB97F` (**NR5G ML1 Searcher Measurement**): Beam tracking, L1-RSRP for all SSB beams, active TCI states.\n- `0xB173` / `0xB14D` / `0xB139`: LTE counterpart packets for cross-RAT EN-DC debugging.",
+          "keyFormulas": [
+            "0xB887 = PDSCH status, 0xB821 = RRC signaling, 0xB97F = Beam measurements",
+            "DTX = DCI missed by UE; NACK = DCI decoded, PDSCH CRC failed"
+          ],
+          "memoryAids": [
+            "0xB821 configures the pipe (RRC); 0xB887 monitors the flow (MAC DL); 0xB97F aims the flashlight (Beams)."
+          ],
+          "pitfalls": [
+            "Mistaking DTX (UE didn't decode DCI at all) for NACK (UE decoded DCI but failed CRC check). DTX means PDCCH failure; NACK means PDSCH failure!"
+          ],
+          "codeSnippet": "struct QxdmPdschStatus_0xB887 {\n    uint32_t sfn_slot;\n    uint8_t  harq_pid;\n    uint8_t  mcs;\n    uint8_t  num_layers;\n    uint32_t tb_size_bytes;\n    uint8_t  crc_result; // 0=Pass, 1=Fail, 2=DTX\n};"
+        },
+        {
+          "id": "w10_t2",
+          "title": "The HARQ NACK Storm Diagnostic Decision Tree",
+          "specClause": "Field Troubleshooting & RCA Playbook",
+          "explanation": "Systematic 4-step decision tree for resolving sudden DL throughput collapses and continuous NACK storms:\n- **Step 1: Check PDSCH CRC in 0xB887**:\n  - If CRC is FAIL: Real air-interface degradation. Proceed to Step 2.\n  - If CRC is PASS at UE, but gNodeB keeps retransmitting: Uplink feedback problem! UE is sending ACK, but gNodeB fails to decode PUCCH (interpreting DTX as NACK). Root cause: High UL interference or Timing Advance drift.\n- **Step 2: Check SNR & Interference in 0xB97F / 0xB821**:\n  - If SNR dropped sharply: External RF interference or beam misalignment.\n  - If SNR is high (> 20 dB) but BLER is 100%: Link adaptation failure! OLLA offset drifted, forcing MCS 27 on a channel that only supports MCS 16.\n- **Step 3: Check Cross-Carrier & BWP Configuration in 0xB821**:\n  - Verify TDRA SLIV validity and DCI alignment.\n- **Step 4: Check L1/L2 Latency & Scheduler Misses in baseband telemetry**:\n  - Inspect if O-DU missed the slot tick, resulting in empty/zero transmissions.",
+          "keyFormulas": [
+            "BLER = (N_NACK + N_DTX) / N_total · 100%",
+            "Target BLER = 10%",
+            "CRC Pass at UE + Retransmit at gNodeB ⇒ Uplink PUCCH failure"
+          ],
+          "memoryAids": [
+            "CRC Pass at UE + Retransmit at gNodeB = Uplink PUCCH dead! CRC Fail at UE + High SNR = OLLA broke the MCS!"
+          ],
+          "pitfalls": [
+            "Blaming the radio environment when the real root cause was an eNodeB/gNodeB scheduler bug misinterpreting PUCCH DTX."
+          ],
+          "codeSnippet": "enum class RootCause {\n    RADIO_INTERFERENCE,\n    OLLA_MISCONFIGURATION,\n    UPLINK_PUCCH_FAILURE,\n    BEAM_MISALIGNMENT,\n    SCHEDULER_DEADLINE_MISS\n};\n\nRootCause diagnose_nack_storm(bool ue_crc_pass, float snr_db, bool is_gnb_retransmitting) {\n    if (ue_crc_pass && is_gnb_retransmitting) return RootCause::UPLINK_PUCCH_FAILURE;\n    if (!ue_crc_pass && snr_db > 20.0f) return RootCause::OLLA_MISCONFIGURATION;\n    return RootCause::RADIO_INTERFERENCE;\n}"
+        },
+        {
+          "id": "w10_t3",
+          "title": "Telecom System Design: Scalable 125 µs MAC DL Scheduler",
+          "specClause": "L2 Software Architecture / 3GPP gNodeB System Design",
+          "explanation": "Complete system design for an enterprise-grade 5G NR MAC Downlink Scheduler operating under a 125 µs deadline at 120 kHz SCS (or 500 µs at 30 kHz SCS):\n- **Core Allocation**: Cores 2-7 isolated (`isolcpus`), Core 2 pins Feedback Ingestion, Core 3 pins Candidate Metric Sorting (AVX-512 Proportional Fair), Core 4 pins Resource Allocation, Core 5 pins FAPI Serialization.\n- **Memory Architecture**: Zero heap allocation in steady state. All UE contexts (up to 1,000 UEs) and packet descriptors pre-allocated in 1 GB hugepages.\n- **IPC**: Lock-free SPSC queues with acquire/release semantics between cores.\n- **5-Stage Pipeline**: 1) UCI feedback ingestion (15 µs) → 2) Candidate filtering (20 µs) → 3) Resource allocation (45 µs) → 4) PDU assembly (30 µs) → 5) DMA dispatch (15 µs margin).",
+          "keyFormulas": [
+            "Latency Budget: T_total = 15 + 20 + 45 + 30 = 110 µs < 125 µs",
+            "Throughput: 1,000 UEs supported concurrently"
+          ],
+          "memoryAids": [
+            "5 stages, 4 cores, zero mallocs, 110 µs finish. Determinism is king."
+          ],
+          "pitfalls": [
+            "Using condition variables or sleeping locks to synchronize pipeline stages.",
+            "Failing to lock memory (mlockall) leading to major page faults."
+          ],
+          "codeSnippet": "class MacSchedulerPipeline {\n    LockFreeSPSCQueue<UciFeedback, 1024>   feedback_q_;\n    LockFreeSPSCQueue<CandidateList, 1024> candidate_q_;\n    LockFreeSPSCQueue<GrantList, 1024>     grant_q_;\n\npublic:\n    void execute_pipeline_tick(uint32_t slot) {\n        // Stage 1 -> Stage 2 -> Stage 3 -> Stage 4\n    }\n};"
+        },
+        {
+          "id": "w10_t4",
+          "title": "Candidate Positioning, IISc ML Thesis Narrative & Germany Strategy",
+          "specClause": "Career Strategy / German Job Market & EU Blue Card",
+          "explanation": "Executive strategy for positioning Samsung SRI-B 4G LTE L2 expertise when targeting senior 5G NR Baseband and Cloud RAN roles in Germany (Ericsson Aachen/Frankfurt, Apple Munich, Rohde & Schwarz Munich, Nokia Munich/Ulm) and Ericsson India.\n- **The Unfair Advantage**: 5+ years of hardened production LTE MAC DL debugging + M.Tech in Data Science from IISc Bangalore.\n- **The Core Bridge**: \"4G and 5G share the identical fundamental physics and scheduler objectives (fairness, throughput, latency), but 5G NR makes everything dynamic, flexible, and asynchronous (flexible numerologies, dynamic K1, BWP, CBG). Having lived through every LTE failure mode, I understand exactly *why* 5G was engineered this way and how to build and debug it.\"\n- **Connecting the IISc ML Thesis**: Explain the Treelite decision-tree deployment for Inter-Site CA PUCCH prediction (0.42 ms latency, 91% hit rate), demonstrating how ML can be applied within strict real-time RTOS constraints.\n- **Germany Relocation**: EU Blue Card fast-track roadmap (Section 81a AufenthG), Anabin database degree recognition, ATS-optimized German tech CV.",
+          "keyFormulas": [
+            "EU Blue Card threshold for IT/Engineering ≈ €45,300 (market offers: €85k - €115k)",
+            "Fast-track permanent residency in 21-27 months with B1 German"
+          ],
+          "memoryAids": [
+            "Experience is the anchor; 5G specs are the sails; Machine Learning is the turbocharger."
+          ],
+          "pitfalls": [
+            "Sounding like a generic data scientist rather than a hardcore telecom systems engineer.",
+            "Having an unformatted, narrative-heavy CV rather than a concise, ATS-scannable document."
+          ],
+          "codeSnippet": "// German Interview Elevator Pitch Framework:\n// 1. \"I am a Lead Systems Engineer with 5+ years specializing in 3GPP MAC Downlink scheduling and Carrier Aggregation at Samsung SRI-B.\"\n// 2. \"I hold an M.Tech in Data Science from IISc Bangalore, where my thesis applied ML within sub-millisecond RTOS scheduling loops.\"\n// 3. \"I bridge low-level C++ systems determinism with deep 3GPP specification mastery across TS 38.321 and TS 38.214.\" "
+        }
+      ]
+    }
+  ],
+  "evolutionMatrix": [
+    {
+      "dimension": "Subcarrier Spacing & Numerology",
+      "lte": "Fixed 15 kHz Subcarrier Spacing (1 ms subframe, 1 ms TTI).",
+      "nr": "Flexible numerology: Δf = 2^μ · 15 kHz (15, 30, 60, 120, 240 kHz). Slot durations scale from 1.0 ms down to 62.5 µs.",
+      "impact": "Demands sub-millisecond scheduling loops (125 µs at 120 kHz SCS) and mixed-numerology co-existence."
+    },
+    {
+      "dimension": "Bandwidth & RF Adaptation",
+      "lte": "Fixed channel bandwidth up to 20 MHz per carrier. UE must monitor full bandwidth continuously.",
+      "nr": "Bandwidth Parts (BWP): Up to 4 BWPs per cell, each with independent SCS, bandwidth, and location. Rel-16 Dormant BWP.",
+      "impact": "Slashes UE RF power consumption by 90% during idle or low-data periods; allows fast 2 ms reactivation."
+    },
+    {
+      "dimension": "Downlink HARQ Timeline",
+      "lte": "Rigid synchronous HARQ: Fixed 4 ms feedback offset and fixed 8 ms retransmission cycle in FDD.",
+      "nr": "Fully asynchronous HARQ: Dynamic K1 slot offset signaled per DCI grant. Up to 16 HARQ processes per carrier.",
+      "impact": "Eliminates latency bottlenecks and enables seamless adaptation to TDD, URLLC, and mixed numerologies."
+    },
+    {
+      "dimension": "Retransmission Granularity",
+      "lte": "Transport Block (TB) level only. If 1 code block fails CRC, the entire multi-megabit TB is retransmitted.",
+      "nr": "Code Block Group (CBG) level: TB segmented into up to 8 CBGs. Retransmits ONLY failed CBGs via CBGTI bitmap.",
+      "impact": "Reduces radio retransmission overhead by 75-80% under high-BLER radio conditions."
+    },
+    {
+      "dimension": "MAC PDU Subheader Format",
+      "lte": "All MAC subheaders clustered at the front of the PDU. Requires knowing all SDU sizes before assembly.",
+      "nr": "Subheaders placed immediately in front of each corresponding SDU or CE (R/F/LCID/L). MAC CEs at front.",
+      "impact": "Enables hardware DMA streaming and just-in-time subheader insertion without multi-pass buffer copying."
+    },
+    {
+      "dimension": "Uplink HARQ-ACK Codebook",
+      "lte": "Fixed subframe bitmaps or basic ACK/NACK bundling based on rigid TDD configurations.",
+      "nr": "Type-1 Semi-Static (candidate occasion grid) and Type-2 Dynamic (Counter & Total DAI modulo-4 counting).",
+      "impact": "Prevents false NACK cascades and minimizes uplink PUCCH payload overhead across wide carrier aggregation."
+    },
+    {
+      "dimension": "Channel Bandwidth & Aggregation",
+      "lte": "Max 20 MHz per carrier, up to 5 carriers aggregated (100 MHz total bandwidth).",
+      "nr": "Max 100 MHz (FR1) or 400 MHz (FR2) per carrier, up to 16 carriers aggregated (up to 6.4 GHz bandwidth).",
+      "impact": "Requires zero-copy lock-free multi-carrier scheduler pipelines to handle gigabit data throughput."
+    },
+    {
+      "dimension": "MIMO & Beam Management",
+      "lte": "Cell-specific reference signals (CRS) broadcasted omni-directionally or with static sector beams.",
+      "nr": "Beamformed SSB and CSI-RS with dynamic TCI States and QCL Types (A/B/C/D). Real-time beam tracking and BFR.",
+      "impact": "MAC scheduler must track active beam index and spatial Rx parameters per UE for every PDSCH allocation."
+    },
+    {
+      "dimension": "Architecture & Disaggregation",
+      "lte": "Monolithic eNodeB (BBU connected to RRH via CPRI). Rigid proprietary hardware.",
+      "nr": "Disaggregated O-RAN: O-CU (PDCP/RRC), O-DU (RLC/MAC/High-PHY), O-RU (Low-PHY/RF) over Split 7-2x and SCF FAPI.",
+      "impact": "Enables open vendor interoperability, cloud baseband virtualization (Cloud-RAN), and standardized FAPI APIs."
+    }
+  ],
+  "topInterviewQuestions": [
+    {
+      "id": "TOP_01",
+      "question": "How does Downlink HARQ differ between 4G LTE and 5G NR?",
+      "specs": "TS 38.321 §5.3, TS 38.214 §5.1, TS 38.213 §9.2.3",
+      "detailedAnswer": "In 4G LTE FDD, Downlink HARQ follows a rigid, synchronous timeline: feedback arrives exactly 4 ms after transmission, and retransmissions occur at fixed 8 ms intervals with 8 stop-and-wait processes per carrier.\n\nIn 5G NR, HARQ is completely redesigned for extreme flexibility across varied numerologies (15 kHz to 120 kHz):\n1. **Fully Asynchronous & Dynamic Timing (K1)**: The gNodeB explicitly dictates feedback timing via the 'PDSCH-to-HARQ_feedback timing indicator' field in DCI format 1_0/1_1. The slot offset K1 dynamically instructs the UE when to transmit PUCCH HARQ-ACK.\n2. **Up to 16 Parallel HARQ Processes**: Accommodates high-throughput mmWave and carrier aggregation pipelines, preventing scheduler stall.\n3. **Code Block Group (CBG) Retransmissions (TS 38.321 §5.3.2.2)**: Transport blocks segmented into multiple code blocks can be grouped into up to 8 CBGs. Retransmissions target only failed CBGs via CBGTI bitmasks, cutting radio retransmission overhead by 75-80%.\n4. **Dynamic HARQ-ACK Codebooks (TS 38.213 §9.2.3)**: Uses Counter DAI (cDAI) and Total DAI (tDAI) to size the feedback payload dynamically and catch missed DCIs, replacing LTE's rigid subframe bitmaps.",
+      "modelAnswer": "In 4G LTE FDD, Downlink HARQ follows a rigid, synchronous timeline: feedback arrives exactly 4 ms after transmission, and retransmissions occur at fixed 8 ms intervals with 8 stop-and-wait processes per carrier.\n\nIn 5G NR, HARQ is completely redesigned for extreme flexibility across varied numerologies (15 kHz to 120 kHz):\n1. **Fully Asynchronous & Dynamic Timing (K1)**: The gNodeB explicitly dictates feedback timing via the 'PDSCH-to-HARQ_feedback timing indicator' field in DCI format 1_0/1_1. The slot offset K1 dynamically instructs the UE when to transmit PUCCH HARQ-ACK.\n2. **Up to 16 Parallel HARQ Processes**: Accommodates high-throughput mmWave and carrier aggregation pipelines, preventing scheduler stall.\n3. **Code Block Group (CBG) Retransmissions (TS 38.321 §5.3.2.2)**: Transport blocks segmented into multiple code blocks can be grouped into up to 8 CBGs. Retransmissions target only failed CBGs via CBGTI bitmasks, cutting radio retransmission overhead by 75-80%.\n4. **Dynamic HARQ-ACK Codebooks (TS 38.213 §9.2.3)**: Uses Counter DAI (cDAI) and Total DAI (tDAI) to size the feedback payload dynamically and catch missed DCIs, replacing LTE's rigid subframe bitmaps."
+    },
+    {
+      "id": "TOP_02",
+      "question": "Explain the Bandwidth Part (BWP) framework and its significance in MAC Downlink.",
+      "specs": "TS 38.321 §5.15, TS 38.213 §12",
+      "detailedAnswer": "A Bandwidth Part (BWP) is a contiguous subset of physical resource blocks (PRBs) on a carrier with a specific numerology (subcarrier spacing and cyclic prefix).\n- **Core Architecture**: A UE can be configured with up to 4 DL BWPs and 4 UL BWPs per serving cell, but only ONE DL and ONE UL BWP is active at any given instant (in Rel-15).\n- **Types**: Initial BWP (for initial access/RACH), Active BWP (for current data transfer), and Default BWP (for battery saving when inactivity timer expires).\n- **Significance in MAC DL**:\n  1. **Energy Efficiency**: Eliminates the requirement for UEs to monitor wideband 100 MHz channels when idle, shrinking RF reception bandwidth to 20 MHz or less.\n  2. **Dynamic Adaptation**: MAC switches BWPs dynamically via 1-2 bits in DCI 0_1/1_1 or via `bwp-InactivityTimer`.\n  3. **Multi-Numerology Operation**: Different BWPs on the same carrier can use different numerologies (e.g. 15 kHz for wide coverage, 30 kHz for high throughput).",
+      "modelAnswer": "A Bandwidth Part (BWP) is a contiguous subset of physical resource blocks (PRBs) on a carrier with a specific numerology (subcarrier spacing and cyclic prefix).\n- **Core Architecture**: A UE can be configured with up to 4 DL BWPs and 4 UL BWPs per serving cell, but only ONE DL and ONE UL BWP is active at any given instant (in Rel-15).\n- **Types**: Initial BWP (for initial access/RACH), Active BWP (for current data transfer), and Default BWP (for battery saving when inactivity timer expires).\n- **Significance in MAC DL**:\n  1. **Energy Efficiency**: Eliminates the requirement for UEs to monitor wideband 100 MHz channels when idle, shrinking RF reception bandwidth to 20 MHz or less.\n  2. **Dynamic Adaptation**: MAC switches BWPs dynamically via 1-2 bits in DCI 0_1/1_1 or via `bwp-InactivityTimer`.\n  3. **Multi-Numerology Operation**: Different BWPs on the same carrier can use different numerologies (e.g. 15 kHz for wide coverage, 30 kHz for high throughput)."
+    },
+    {
+      "id": "TOP_03",
+      "question": "What is the difference between PDSCH Mapping Type A and Type B?",
+      "specs": "TS 38.214 §5.1.2.1",
+      "detailedAnswer": "PDSCH Mapping Type defines where Demodulation Reference Signals (DM-RS) are placed relative to the slot boundary and how resources are scheduled:\n- **Mapping Type A (Slot-Based Scheduling)**:\n  - DM-RS position: Fixed at symbol 2 or 3 of the slot, regardless of where PDSCH data starts.\n  - Start symbol: S ∈ {2, 3}; Length: L ∈ {3..14}, with S + L ≤ 14.\n  - Typical use: Standard eMBB slot transmissions where the whole slot or large fraction is allocated to one or more UEs.\n- **Mapping Type B (Mini-Slot / Non-Slot Scheduling)**:\n  - DM-RS position: Always at the VERY FIRST symbol of the PDSCH allocation.\n  - Start symbol: S ∈ {0..12}; Length: L ∈ {2, 4, 7}, with S + L ≤ 14.\n  - Typical use: Ultra-Reliable Low-Latency Communication (URLLC) preemption and mid-slot transmissions, allowing immediate channel estimation without waiting for slot boundaries.",
+      "modelAnswer": "PDSCH Mapping Type defines where Demodulation Reference Signals (DM-RS) are placed relative to the slot boundary and how resources are scheduled:\n- **Mapping Type A (Slot-Based Scheduling)**:\n  - DM-RS position: Fixed at symbol 2 or 3 of the slot, regardless of where PDSCH data starts.\n  - Start symbol: S ∈ {2, 3}; Length: L ∈ {3..14}, with S + L ≤ 14.\n  - Typical use: Standard eMBB slot transmissions where the whole slot or large fraction is allocated to one or more UEs.\n- **Mapping Type B (Mini-Slot / Non-Slot Scheduling)**:\n  - DM-RS position: Always at the VERY FIRST symbol of the PDSCH allocation.\n  - Start symbol: S ∈ {0..12}; Length: L ∈ {2, 4, 7}, with S + L ≤ 14.\n  - Typical use: Ultra-Reliable Low-Latency Communication (URLLC) preemption and mid-slot transmissions, allowing immediate channel estimation without waiting for slot boundaries."
+    },
+    {
+      "id": "TOP_04",
+      "question": "How does 5G NR handle Cross-Carrier Scheduling with mixed numerologies?",
+      "specs": "TS 38.214 §5.1.2.1, TS 38.213 §10.1",
+      "detailedAnswer": "Cross-carrier scheduling allows PDCCH on a scheduling cell (e.g. PCell at lower frequency) to allocate PDSCH/PUSCH on a scheduled cell (e.g. SCell at higher frequency).\nWhen carriers operate at different subcarrier spacings (μ_PDCCH ≠ μ_PDSCH):\n1. **Slot Ratio Alignment**: Slot durations scale by 2^(μ_PDSCH - μ_PDCCH).\n   - If μ_PDCCH < μ_PDSCH (e.g. 15 kHz scheduling 30 kHz): 1 PDCCH slot covers 2 PDSCH slots. DCI indicates which sub-slot (2n or 2n+1) is scheduled.\n   - If μ_PDCCH > μ_PDSCH (e.g. 30 kHz scheduling 15 kHz): Multiple PDCCH slots fall inside one PDSCH slot duration; scheduler enforces non-overlapping grants.\n2. **Timing Offset (K0)**: In DCI, K0 defines the slot offset between PDCCH and PDSCH, computed relative to the scheduled cell's numerology.\n3. **Processing Delay (Np,1)**: The scheduler must ensure the time between PDCCH end and PDSCH start satisfies UE preparation time Np,1 based on min(μ_PDCCH, μ_PDSCH).",
+      "modelAnswer": "Cross-carrier scheduling allows PDCCH on a scheduling cell (e.g. PCell at lower frequency) to allocate PDSCH/PUSCH on a scheduled cell (e.g. SCell at higher frequency).\nWhen carriers operate at different subcarrier spacings (μ_PDCCH ≠ μ_PDSCH):\n1. **Slot Ratio Alignment**: Slot durations scale by 2^(μ_PDSCH - μ_PDCCH).\n   - If μ_PDCCH < μ_PDSCH (e.g. 15 kHz scheduling 30 kHz): 1 PDCCH slot covers 2 PDSCH slots. DCI indicates which sub-slot (2n or 2n+1) is scheduled.\n   - If μ_PDCCH > μ_PDSCH (e.g. 30 kHz scheduling 15 kHz): Multiple PDCCH slots fall inside one PDSCH slot duration; scheduler enforces non-overlapping grants.\n2. **Timing Offset (K0)**: In DCI, K0 defines the slot offset between PDCCH and PDSCH, computed relative to the scheduled cell's numerology.\n3. **Processing Delay (Np,1)**: The scheduler must ensure the time between PDCCH end and PDSCH start satisfies UE preparation time Np,1 based on min(μ_PDCCH, μ_PDSCH)."
+    },
+    {
+      "id": "TOP_05",
+      "question": "What is the difference between Type-1 (Semi-Static) and Type-2 (Dynamic) HARQ-ACK codebooks?",
+      "specs": "TS 38.213 §9.2.3",
+      "detailedAnswer": "HARQ-ACK codebooks determine how the UE bundles and serializes ACK/NACK bits for multiple PDSCH receptions onto a single PUCCH/PUSCH uplink transmission:\n- **Type-1 (Semi-Static) Codebook**:\n  - Size is determined by RRC configuration: evaluates all possible candidate PDSCH occasions based on the set of K1 values and TDRA SLIV table across all configured component carriers.\n  - Generates a fixed-size bitmap. If an occasion had no grant, UE inserts NACK.\n  - Pro: Robust against missed DCIs (gNodeB and UE always agree on bitmap length and indexing).\n  - Con: Heavy uplink payload overhead when data traffic is sporadic.\n- **Type-2 (Dynamic) Codebook**:\n  - Size adapts dynamically to the actual number of scheduled grants.\n  - Uses Counter DAI (cDAI) and Total DAI (tDAI) in DCI to trace scheduled assignments using modulo-4 counting.\n  - Pro: Highly compact uplink payload.\n  - Con: If trailing DCIs are lost across all carriers, UE cannot detect omission without tDAI coordination.",
+      "modelAnswer": "HARQ-ACK codebooks determine how the UE bundles and serializes ACK/NACK bits for multiple PDSCH receptions onto a single PUCCH/PUSCH uplink transmission:\n- **Type-1 (Semi-Static) Codebook**:\n  - Size is determined by RRC configuration: evaluates all possible candidate PDSCH occasions based on the set of K1 values and TDRA SLIV table across all configured component carriers.\n  - Generates a fixed-size bitmap. If an occasion had no grant, UE inserts NACK.\n  - Pro: Robust against missed DCIs (gNodeB and UE always agree on bitmap length and indexing).\n  - Con: Heavy uplink payload overhead when data traffic is sporadic.\n- **Type-2 (Dynamic) Codebook**:\n  - Size adapts dynamically to the actual number of scheduled grants.\n  - Uses Counter DAI (cDAI) and Total DAI (tDAI) in DCI to trace scheduled assignments using modulo-4 counting.\n  - Pro: Highly compact uplink payload.\n  - Con: If trailing DCIs are lost across all carriers, UE cannot detect omission without tDAI coordination."
+    },
+    {
+      "id": "TOP_06",
+      "question": "Walk through the exact algorithm for SLIV calculation in PDSCH TDRA.",
+      "specs": "TS 38.214 §5.1.2.1",
+      "detailedAnswer": "The Start and Length Indicator Value (SLIV) compresses the start symbol S and allocated length L into a single integer (0 to 127, 7 bits):\nConstraint: 0 < L ≤ 14 - S.\n\n**Encoding Algorithm**:\n1. Check condition: if (L - 1) ≤ 7:\n   SLIV = 14 * (L - 1) + S\n2. Else:\n   SLIV = 14 * (14 - L + 1) + (14 - 1 - S)\n\n**Decoding Algorithm**:\n1. Compute quotient q = floor(SLIV / 14) and remainder r = SLIV % 14.\n2. If (q + r) ≤ 13:\n   L = q + 1\n   S = r\n3. Else:\n   L = 14 - q + 1\n   S = 14 - 1 - r\n\nExample: S=2, L=12. (L - 1) = 11 > 7.\nSLIV = 14 * (14 - 12 + 1) + (14 - 1 - 2) = 14 * 3 + 11 = 42 + 11 = 53.",
+      "modelAnswer": "The Start and Length Indicator Value (SLIV) compresses the start symbol S and allocated length L into a single integer (0 to 127, 7 bits):\nConstraint: 0 < L ≤ 14 - S.\n\n**Encoding Algorithm**:\n1. Check condition: if (L - 1) ≤ 7:\n   SLIV = 14 * (L - 1) + S\n2. Else:\n   SLIV = 14 * (14 - L + 1) + (14 - 1 - S)\n\n**Decoding Algorithm**:\n1. Compute quotient q = floor(SLIV / 14) and remainder r = SLIV % 14.\n2. If (q + r) ≤ 13:\n   L = q + 1\n   S = r\n3. Else:\n   L = 14 - q + 1\n   S = 14 - 1 - r\n\nExample: S=2, L=12. (L - 1) = 11 > 7.\nSLIV = 14 * (14 - 12 + 1) + (14 - 1 - 2) = 14 * 3 + 11 = 42 + 11 = 53."
+    },
+    {
+      "id": "TOP_07",
+      "question": "What are TCI States and QCL Types in 5G NR?",
+      "specs": "TS 38.214 §5.1.5",
+      "detailedAnswer": "Quasi-Co-Location (QCL) defines mathematical assumptions that channel properties of one reference signal can be applied to demodulate another:\n- **QCL Types**:\n  - QCL-TypeA: Doppler shift, Doppler spread, Average delay, Delay spread (full multipath profile).\n  - QCL-TypeB: Doppler shift, Doppler spread.\n  - QCL-TypeC: Doppler shift, Average delay.\n  - QCL-TypeD: Spatial Rx parameter (Angle of Arrival / same Rx beamforming weights for mmWave!).\n- **TCI (Transmission Configuration Indicator) States**:\n  - Connects PDSCH DM-RS to source reference signals (SSB or CSI-RS).\n  - RRC configures up to 128 TCI states.\n  - MAC CE activates a subset of up to 8 active TCI states.\n  - DCI 1_1 uses a 3-bit field to dynamically switch between the 8 active beams slot-by-slot.",
+      "modelAnswer": "Quasi-Co-Location (QCL) defines mathematical assumptions that channel properties of one reference signal can be applied to demodulate another:\n- **QCL Types**:\n  - QCL-TypeA: Doppler shift, Doppler spread, Average delay, Delay spread (full multipath profile).\n  - QCL-TypeB: Doppler shift, Doppler spread.\n  - QCL-TypeC: Doppler shift, Average delay.\n  - QCL-TypeD: Spatial Rx parameter (Angle of Arrival / same Rx beamforming weights for mmWave!).\n- **TCI (Transmission Configuration Indicator) States**:\n  - Connects PDSCH DM-RS to source reference signals (SSB or CSI-RS).\n  - RRC configures up to 128 TCI states.\n  - MAC CE activates a subset of up to 8 active TCI states.\n  - DCI 1_1 uses a 3-bit field to dynamically switch between the 8 active beams slot-by-slot."
+    },
+    {
+      "id": "TOP_08",
+      "question": "How does Rel-16 Dormant BWP improve Carrier Aggregation power efficiency?",
+      "specs": "TS 38.321 §5.13, §5.15",
+      "detailedAnswer": "In Rel-15 CA, when an SCell is deactivated to save battery, all channel measurements stop. Re-activating it requires 24-34 ms for RRC reconfiguration, beam alignment, and channel feedback restart.\n- **Rel-16 Dormant BWP Solution**:\n  - The SCell enters a 'Dormant BWP' where the UE stops PDCCH blind decoding (saving 90% of RF and baseband processing power).\n  - Crucially, the UE **continues** periodic CSI measurements, CQI/RI reporting, and beam tracking towards the PCell.\n  - Switching from Dormant BWP back to Active BWP is executed in **2 to 4 ms** via a dedicated DCI 1_1 or DCI 2_6 bitmap.\n  - Achieves near-instantaneous multi-gigabit CA aggregation bursts with minimal baseline battery drain.",
+      "modelAnswer": "In Rel-15 CA, when an SCell is deactivated to save battery, all channel measurements stop. Re-activating it requires 24-34 ms for RRC reconfiguration, beam alignment, and channel feedback restart.\n- **Rel-16 Dormant BWP Solution**:\n  - The SCell enters a 'Dormant BWP' where the UE stops PDCCH blind decoding (saving 90% of RF and baseband processing power).\n  - Crucially, the UE **continues** periodic CSI measurements, CQI/RI reporting, and beam tracking towards the PCell.\n  - Switching from Dormant BWP back to Active BWP is executed in **2 to 4 ms** via a dedicated DCI 1_1 or DCI 2_6 bitmap.\n  - Achieves near-instantaneous multi-gigabit CA aggregation bursts with minimal baseline battery drain."
+    },
+    {
+      "id": "TOP_09",
+      "question": "Describe the EN-DC Option 3x architecture and split bearer data flow.",
+      "specs": "3GPP TS 37.340, TS 38.300 §6.5",
+      "detailedAnswer": "E-UTRA-NR Dual Connectivity (EN-DC Option 3x) is the dominant Non-Standalone (NSA) 5G deployment model:\n1. **Control Plane**: Master eNodeB (MeNB, 4G LTE) anchors S1-MME to the EPC. SgNB (5G NR) coordinates with MeNB over X2-C.\n2. **User Plane**: S1-U user plane traffic from the Serving Gateway terminates directly at the 5G SgNB.\n3. **SCG Split Bearer Flow**:\n   - Packets enter NR PDCP at the SgNB, where PDCP Sequence Numbers are assigned.\n   - SgNB splits traffic: sending high-throughput chunks directly over 5G RLC/MAC/PHY, and routing secondary chunks over the X2-U interface to the MeNB for 4G LTE transmission.\n   - Flow control is regulated by TS 38.425 Downlink Data Delivery Status (DDDS) frames sent from MeNB back to SgNB to prevent X2 buffer overflow.",
+      "modelAnswer": "E-UTRA-NR Dual Connectivity (EN-DC Option 3x) is the dominant Non-Standalone (NSA) 5G deployment model:\n1. **Control Plane**: Master eNodeB (MeNB, 4G LTE) anchors S1-MME to the EPC. SgNB (5G NR) coordinates with MeNB over X2-C.\n2. **User Plane**: S1-U user plane traffic from the Serving Gateway terminates directly at the 5G SgNB.\n3. **SCG Split Bearer Flow**:\n   - Packets enter NR PDCP at the SgNB, where PDCP Sequence Numbers are assigned.\n   - SgNB splits traffic: sending high-throughput chunks directly over 5G RLC/MAC/PHY, and routing secondary chunks over the X2-U interface to the MeNB for 4G LTE transmission.\n   - Flow control is regulated by TS 38.425 Downlink Data Delivery Status (DDDS) frames sent from MeNB back to SgNB to prevent X2 buffer overflow."
+    },
+    {
+      "id": "TOP_10",
+      "question": "How does the MAC PDU structure in 5G NR differ from 4G LTE, and why does it matter for high-speed software architectures?",
+      "specs": "TS 38.321 §6.1.2, TS 36.321 §6.1.2",
+      "detailedAnswer": "In 4G LTE, all MAC subheaders were grouped at the very front of the MAC PDU. This meant the MAC layer had to know the exact sizes of all RLC SDUs in advance before serializing the packet.\n\nIn 5G NR, each MAC subheader immediately precedes its corresponding MAC SDU or MAC CE:\n- **Subheader Layout**: [R/F/LCID/L] placed right before the payload data.\n- **Why it Matters for High-Speed Software**:\n  1. **Just-in-Time Assembly**: RLC can stream SDUs into DMA buffers asynchronously without waiting for the MAC scheduler to compute all multiplexing headers upfront.\n  2. **Hardware DMA Acceleration**: Network interface accelerators can pipeline subheader insertion directly into packet headroom without multi-pass buffer copies (zero-copy processing).\n  3. **Low Latency**: Directly addresses the sub-millisecond slot deadlines (e.g. 125 µs) of 5G NR.",
+      "modelAnswer": "In 4G LTE, all MAC subheaders were grouped at the very front of the MAC PDU. This meant the MAC layer had to know the exact sizes of all RLC SDUs in advance before serializing the packet.\n\nIn 5G NR, each MAC subheader immediately precedes its corresponding MAC SDU or MAC CE:\n- **Subheader Layout**: [R/F/LCID/L] placed right before the payload data.\n- **Why it Matters for High-Speed Software**:\n  1. **Just-in-Time Assembly**: RLC can stream SDUs into DMA buffers asynchronously without waiting for the MAC scheduler to compute all multiplexing headers upfront.\n  2. **Hardware DMA Acceleration**: Network interface accelerators can pipeline subheader insertion directly into packet headroom without multi-pass buffer copies (zero-copy processing).\n  3. **Low Latency**: Directly addresses the sub-millisecond slot deadlines (e.g. 125 µs) of 5G NR."
+    },
+    {
+      "id": "TOP_11",
+      "question": "What are the latency requirements for a 5G NR MAC scheduler running at 30 kHz SCS?",
+      "specs": "TS 38.211 §4.3, O-RAN Architecture",
+      "detailedAnswer": "At 30 kHz SCS (μ = 1, standard FR1 C-band deployment):\n- **Slot Duration**: Exactly 0.5 ms (500 µs).\n- **Execution Budget Breakdown**:\n  - L1 UCI Ingestion & OLLA Updates: 50 µs\n  - Time-Domain Candidate Filtering & Metric Sorting (PF / QoS): 80 µs\n  - Frequency-Domain RB Allocation & TBS Table Lookup: 150 µs\n  - MAC PDU Subheader Generation & FAPI Dispatch: 100 µs\n  - DMA Baseband Acceleration Transfer & Margin: 120 µs\n  - **Total Real-Time Budget**: Must complete within ~380 µs to guarantee L1 transmission at the slot boundary.\n- **OS Constraints**: Requires PREEMPT_RT Linux kernel, CPU core pinning (`pthread_setaffinity_np`), `mlockall` to eliminate page faults, and lock-free SPSC queues.",
+      "modelAnswer": "At 30 kHz SCS (μ = 1, standard FR1 C-band deployment):\n- **Slot Duration**: Exactly 0.5 ms (500 µs).\n- **Execution Budget Breakdown**:\n  - L1 UCI Ingestion & OLLA Updates: 50 µs\n  - Time-Domain Candidate Filtering & Metric Sorting (PF / QoS): 80 µs\n  - Frequency-Domain RB Allocation & TBS Table Lookup: 150 µs\n  - MAC PDU Subheader Generation & FAPI Dispatch: 100 µs\n  - DMA Baseband Acceleration Transfer & Margin: 120 µs\n  - **Total Real-Time Budget**: Must complete within ~380 µs to guarantee L1 transmission at the slot boundary.\n- **OS Constraints**: Requires PREEMPT_RT Linux kernel, CPU core pinning (`pthread_setaffinity_np`), `mlockall` to eliminate page faults, and lock-free SPSC queues."
+    },
+    {
+      "id": "TOP_12",
+      "question": "How does Outer Loop Link Adaptation (OLLA) interact with CQI feedback in 5G MAC DL?",
+      "specs": "TS 38.214 §5.2.2 & Scheduler Algorithms",
+      "detailedAnswer": "Inner loop link adaptation converts periodic UE CQI reports (1 to 15) into an initial Signal-to-Interference-plus-Noise Ratio (SINR) using static AWGN simulation lookup tables.\nHowever, real radio environments suffer from multi-path fading, interference fluctuations, and CQI reporting delays.\n\nOLLA maintains an adaptive offset Δ_OLLA to adjust effective SINR:\nSINR_eff = SINR_CQI - Δ_OLLA\n\n**Closed-Loop Step Dynamics**:\n- On HARQ ACK: Δ_OLLA = Δ_OLLA - Δ_down\n- On HARQ NACK: Δ_OLLA = Δ_OLLA + Δ_up\nTo converge to a target 10% BLER:\nΔ_down = Δ_up * (BLER_target / (1 - BLER_target)) = Δ_up * (0.10 / 0.90) = Δ_up / 9.\nExample: Δ_up = 1.0 dB implies Δ_down = 0.111 dB.",
+      "modelAnswer": "Inner loop link adaptation converts periodic UE CQI reports (1 to 15) into an initial Signal-to-Interference-plus-Noise Ratio (SINR) using static AWGN simulation lookup tables.\nHowever, real radio environments suffer from multi-path fading, interference fluctuations, and CQI reporting delays.\n\nOLLA maintains an adaptive offset Δ_OLLA to adjust effective SINR:\nSINR_eff = SINR_CQI - Δ_OLLA\n\n**Closed-Loop Step Dynamics**:\n- On HARQ ACK: Δ_OLLA = Δ_OLLA - Δ_down\n- On HARQ NACK: Δ_OLLA = Δ_OLLA + Δ_up\nTo converge to a target 10% BLER:\nΔ_down = Δ_up * (BLER_target / (1 - BLER_target)) = Δ_up * (0.10 / 0.90) = Δ_up / 9.\nExample: Δ_up = 1.0 dB implies Δ_down = 0.111 dB."
+    },
+    {
+      "id": "TOP_13",
+      "question": "What is the FAPI interface, and what are the key messages exchanged between MAC and PHY?",
+      "specs": "Small Cell Forum SCF 222 v10.02",
+      "detailedAnswer": "The Small Cell Forum Functional Application Platform Interface (FAPI) standardizes the software messaging contract between Layer 2 (MAC) and Layer 1 (PHY) baseband firmware.\n\nKey Message Flows:\n1. **DL_TTI.request (MAC -> PHY)**: Sent every slot. Contains resource assignments for PDCCH, PDSCH, and CSI-RS (SLIV, PRBs, MCS, precoding matrices).\n2. **TX_Data.request (MAC -> PHY)**: Carries the actual transport block payload bytes generated by MAC multiplexing.\n3. **UL_TTI.request (MAC -> PHY)**: Directs PHY which PUSCH, PUCCH, and PRACH resources to listen for in the upcoming uplink slot.\n4. **UCI.indication (PHY -> MAC)**: Uplink Control Information delivered from PHY to MAC containing decoded HARQ ACK/NACKs, CQI, PMI, and RI.",
+      "modelAnswer": "The Small Cell Forum Functional Application Platform Interface (FAPI) standardizes the software messaging contract between Layer 2 (MAC) and Layer 1 (PHY) baseband firmware.\n\nKey Message Flows:\n1. **DL_TTI.request (MAC -> PHY)**: Sent every slot. Contains resource assignments for PDCCH, PDSCH, and CSI-RS (SLIV, PRBs, MCS, precoding matrices).\n2. **TX_Data.request (MAC -> PHY)**: Carries the actual transport block payload bytes generated by MAC multiplexing.\n3. **UL_TTI.request (MAC -> PHY)**: Directs PHY which PUSCH, PUCCH, and PRACH resources to listen for in the upcoming uplink slot.\n4. **UCI.indication (PHY -> MAC)**: Uplink Control Information delivered from PHY to MAC containing decoded HARQ ACK/NACKs, CQI, PMI, and RI."
+    },
+    {
+      "id": "TOP_14",
+      "question": "Explain the difference between Type 0 and Type 1 Frequency Domain Resource Allocation (FDRA).",
+      "specs": "TS 38.214 §5.1.2.2",
+      "detailedAnswer": "In 5G NR PDSCH, the gNodeB signals allocated Physical Resource Blocks (PRBs) using one of two methods:\n- **Type 0 (Resource Block Group Bitmap)**:\n  - PRBs are grouped into RBGs of size P ∈ {2, 4, 8, 16} based on BWP bandwidth and RRC table config.\n  - A bitmap in DCI assigns individual RBGs (1 bit per RBG).\n  - Pro: Allows non-contiguous, frequency-selective scheduling to exploit channel peaks.\n  - Con: Larger DCI bit overhead.\n- **Type 1 (Contiguous Resource Indication Value - RIV)**:\n  - Allocates a contiguous block of PRBs defined by starting PRB RB_start and length L_RBs.\n  - Encoded into a compact RIV integer using the triangle number formula.\n  - Pro: Highly compact DCI field (log2(N*(N+1)/2) bits).\n  - Con: Cannot allocate non-contiguous frequency chunks.",
+      "modelAnswer": "In 5G NR PDSCH, the gNodeB signals allocated Physical Resource Blocks (PRBs) using one of two methods:\n- **Type 0 (Resource Block Group Bitmap)**:\n  - PRBs are grouped into RBGs of size P ∈ {2, 4, 8, 16} based on BWP bandwidth and RRC table config.\n  - A bitmap in DCI assigns individual RBGs (1 bit per RBG).\n  - Pro: Allows non-contiguous, frequency-selective scheduling to exploit channel peaks.\n  - Con: Larger DCI bit overhead.\n- **Type 1 (Contiguous Resource Indication Value - RIV)**:\n  - Allocates a contiguous block of PRBs defined by starting PRB RB_start and length L_RBs.\n  - Encoded into a compact RIV integer using the triangle number formula.\n  - Pro: Highly compact DCI field (log2(N*(N+1)/2) bits).\n  - Con: Cannot allocate non-contiguous frequency chunks."
+    },
+    {
+      "id": "TOP_15",
+      "question": "How can Machine Learning be applied to 5G MAC Downlink Scheduling (connecting to your IISc thesis)?",
+      "specs": "3GPP Rel-17/18 AI/ML in RAN & Candidate Thesis",
+      "detailedAnswer": "In telecom L2 schedulers, classical heuristic algorithms (Proportional Fair, round-robin) struggle under non-ideal backhaul latency and rapid traffic fluctuations.\n\n**IISc Thesis Application (Akhzar's Research)**:\n1. **Problem**: In Inter-Site Carrier Aggregation over 10-20 ms non-ideal backhaul, the PCell must allocate PUCCH resources for SCell HARQ feedback without real-time knowledge of SCell subframe allocations.\n2. **ML Solution**: A Gradient-Boosted Decision Tree model trained on flow-control metrics, buffer occupancy, and arrival variance predicts SCell scheduling probability.\n3. **Real-Time Deployment**: Compiled via **Treelite** into an ultra-compact ~280 KB native C binary running directly inside the real-time MAC scheduling thread.\n4. **Outcome**: Inference executes in **0.42 ms** (fitting the 1 ms TTI deadline), boosting scheduling hit rate from 42% to 91% and slashing uplink PUCCH resource waste from 58% to 6.4%.",
+      "modelAnswer": "In telecom L2 schedulers, classical heuristic algorithms (Proportional Fair, round-robin) struggle under non-ideal backhaul latency and rapid traffic fluctuations.\n\n**IISc Thesis Application (Akhzar's Research)**:\n1. **Problem**: In Inter-Site Carrier Aggregation over 10-20 ms non-ideal backhaul, the PCell must allocate PUCCH resources for SCell HARQ feedback without real-time knowledge of SCell subframe allocations.\n2. **ML Solution**: A Gradient-Boosted Decision Tree model trained on flow-control metrics, buffer occupancy, and arrival variance predicts SCell scheduling probability.\n3. **Real-Time Deployment**: Compiled via **Treelite** into an ultra-compact ~280 KB native C binary running directly inside the real-time MAC scheduling thread.\n4. **Outcome**: Inference executes in **0.42 ms** (fitting the 1 ms TTI deadline), boosting scheduling hit rate from 42% to 91% and slashing uplink PUCCH resource waste from 58% to 6.4%."
+    }
+  ],
+  "calculationDrills": [
+    {
+      "id": "DRILL_01",
+      "title": "SLIV Encoding & Decoding Drill",
+      "specClause": "3GPP TS 38.214 §5.1.2.1",
+      "scenario": "PDSCH Time Domain Resource Allocation in FR1 C-band slot.",
+      "problemStatement": "Solve the following 3 SLIV encoding/decoding problems:\n- Problem A (Encoding): PDSCH Mapping Type A, Start Symbol S = 2, Length L = 12 symbols. Compute the exact SLIV value.\n- Problem B (Decoding): Base station sends SLIV = 57. Decode start symbol S and length L.\n- Problem C (Decoding): Base station sends SLIV = 53. Decode start symbol S and length L, and verify boundary validity.",
+      "stepByStepSolution": "**Problem A (Encoding: S = 2, L = 12)**:\n1. Check condition: (L - 1) = 11 > 7.\n2. Apply second formula:\n   SLIV = 14 · (14 - L + 1) + (14 - 1 - S)\n   SLIV = 14 · (14 - 12 + 1) + (14 - 1 - 2) = 14 · 3 + 11 = 42 + 11 = 53.\n\n**Problem B (Decoding: SLIV = 57)**:\n1. Quotient q = ⌊57 / 14⌋ = 4, Remainder r = 57 mod 14 = 1.\n2. Check boundary condition: q + r = 4 + 1 = 5 ≤ 13 (Condition 1 satisfied).\n3. L = q + 1 = 5, S = r = 1. Valid: S + L = 6 ≤ 14.\n\n**Problem C (Decoding: SLIV = 53)**:\n1. Quotient q = ⌊53 / 14⌋ = 3, Remainder r = 53 mod 14 = 11.\n2. Check boundary condition: q + r = 3 + 11 = 14 > 13 (Condition 2 satisfied).\n3. L = 14 - q + 1 = 14 - 3 + 1 = 12.\n4. S = 14 - 1 - r = 14 - 1 - 11 = 2.\n5. Verify validity: S + L = 2 + 12 = 14 ≤ 14. Perfectly valid!",
+      "verifiedAnswer": "Problem A: SLIV = 53 | Problem B: S = 1, L = 5 | Problem C: S = 2, L = 12 (Valid)"
+    },
+    {
+      "id": "DRILL_02",
+      "title": "Type-1 vs Type-2 HARQ Codebook Determination & Fault Injection",
+      "specClause": "3GPP TS 38.213 §9.2.3",
+      "scenario": "3 Component Carriers (CC0, CC1, CC2). DL scheduled on CC0 and CC2; CC1 dropped.",
+      "problemStatement": "A UE is configured with 3 Component Carriers (CC0, CC1, CC2). In monitoring occasion 1, gNodeB schedules CC0 and CC2, while CC1 has no data.\n1. Describe how Type-1 (Semi-Static) codebook sizes the uplink payload.\n2. Trace the Counter DAI (cDAI) and Total DAI (tDAI) assignments for Type-2 Dynamic codebook.\n3. Fault Injection: What happens if the UE misses the DCI for CC0? How does the UE detect the loss?",
+      "stepByStepSolution": "**1. Type-1 Semi-Static Codebook**:\n- The UE evaluates all candidate occasions across all 3 carriers based on RRC K1 set.\n- Generates a fixed 12-bit payload covering CC0, CC1, and CC2.\n- Since CC1 has no grant, UE inserts NACK at CC1's positions.\n- Pro: 100% immune to lost DCIs. Con: High uplink overhead.\n\n**2. Type-2 Dynamic Codebook Tracing**:\n- CC0: cDAI = 1, tDAI = 2 (in binary: cDAI=00, tDAI=01).\n- CC2: cDAI = 2, tDAI = 2 (in binary: cDAI=01, tDAI=01).\n- Total uplink payload: exactly 2 bits [ACK_CC0, ACK_CC2]. Highly compact!\n\n**3. Fault Injection (DCI for CC0 is Lost)**:\n- UE receives only the DCI for CC2.\n- UE inspects DCI on CC2: cDAI = 2, tDAI = 2.\n- Detection: UE sees cDAI = 2 as its first received grant. Since it never saw cDAI = 1, it computes: (cDAI_curr - 1) = 1 missed grant.\n- UE inserts NACK at position 1 and places CC2's feedback at position 2: [NACK, ACK_CC2].\n- Alignment is fully preserved! gNodeB detects that CC0 failed and retransmits CC0 immediately.",
+      "verifiedAnswer": "Type-1 sends fixed 12-bit grid | Type-2 sends 2 bits [cDAI=1, cDAI=2] | Lost CC0 caught via cDAI gap → UE sends [NACK, ACK]"
+    },
+    {
+      "id": "DRILL_03",
+      "title": "Full Transport Block Size (TBS) Determination",
+      "specClause": "3GPP TS 38.214 §5.1.3.2",
+      "scenario": "100 MHz FR1 C-band channel at 30 kHz SCS (273 PRBs), 64-QAM MCS 20, 1 layer.",
+      "problemStatement": "Calculate the exact Transport Block Size (TBS) in bits and bytes for:\n- Bandwidth: 100 MHz FR1, 30 kHz SCS (n_PRB = 273).\n- Duration: Normal slot (14 OFDM symbols), 1 DM-RS symbol (12 REs per PRB overhead).\n- MCS: MCS 20 from Table 5.1.3.1-1: 64-QAM (Q_m = 6), Target Code Rate R = 772 / 1024, Layers ν = 1.",
+      "stepByStepSolution": "**Step 1: Calculate Resource Elements (N_RE)**:\n- N'_RE = 14 · 12 - 12 (DMRS) = 168 - 12 = 156 REs/PRB.\n- N_RE = min(156, N'_RE) · n_PRB = 156 · 273 = 42,588 REs.\n\n**Step 2: Calculate Unquantized Information Bits (N_info)**:\n- N_info = N_RE · R · Q_m · ν\n- N_info = 42,588 · (772 / 1024) · 6 · 1 = 42,588 · 0.75390625 · 6 = 192,577.8 bits.\n\n**Step 3 & 4: Quantization (N_info > 3824)**:\n- Compute exponent: n = ⌊log2(192577.8 - 24)⌋ - 5 = ⌊log2(192553.8)⌋ - 5 = 17 - 5 = 12.\n- Quantization step = 2^12 = 4096.\n- N'_info = 4096 · round((192577.8 - 24) / 4096) = 4096 · round(47.01) = 4096 · 47 = 192,512 bits.\n\n**Step 5: LDPC Segmentation & Final TBS**:\n- Since R = 0.75 > 1/4 and N'_info > 8424 ⇒ LDPC Base Graph 1 (K_cb = 8448).\n- Code blocks C = ⌈(192512 + 24) / (8448 - 24)⌉ = ⌈192536 / 8424⌉ = ⌈22.855⌉ = 23 code blocks.\n- TBS = 8 · C · ⌈(N'_info + 24) / (8 · C)⌉ - 24\n- TBS = 8 · 23 · ⌈192536 / 184⌉ - 24 = 184 · 1047 - 24 = 192,648 - 24 = 192,624 bits.\n- TBS in bytes: 192,624 / 8 = 24,078 bytes.",
+      "verifiedAnswer": "Exact TBS = 192,624 bits (24,078 bytes) with C = 23 LDPC code blocks on Base Graph 1"
+    },
+    {
+      "id": "DRILL_04",
+      "title": "Cross-Carrier Scheduling with Mixed Numerologies",
+      "specClause": "3GPP TS 38.214 §5.1.2.1, TS 38.213 §10.1",
+      "scenario": "PCell at μ = 0 (15 kHz SCS, 1 ms slot) cross-carrier schedules SCell at μ = 1 (30 kHz SCS, 0.5 ms slot).",
+      "problemStatement": "A base station uses cross-carrier scheduling with PCell (μ_1 = 0, 15 kHz, 1 ms slot) scheduling SCell (μ_2 = 1, 30 kHz, 0.5 ms slot).\n1. How does 1 PDCCH slot on PCell map to SCell slots?\n2. How does DCI differentiate between the sub-slots?\n3. What is the minimum processing delay constraint N_p,1 that the scheduler must obey?",
+      "stepByStepSolution": "**1. Slot Mapping**:\n- Ratio = 2^(μ_2 - μ_1) = 2^(1 - 0) = 2.\n- 1 PDCCH slot on PCell (slot n, duration 1.0 ms) spans exactly 2 slots on SCell (slots 2n and 2n+1, each duration 0.5 ms).\n\n**2. Sub-Slot Indication**:\n- The DCI format 1_1 on PCell contains a 3-bit Carrier Indicator Field (CIF) identifying the SCell.\n- The Time Domain Resource Assignment field and slot offset K0 dynamically address either slot 2n or slot 2n+1 on the SCell.\n\n**3. Processing Delay Constraint (N_p,1)**:\n- TS 38.214 Table 5.3-1 requires the UE to complete PDCCH reception and decoding before PDSCH symbols arrive.\n- The minimum timing offset must satisfy the slower numerology: T_prep ≥ N_p,1 · T_slot^(min(μ_1, μ_2)) = N_p,1 · 1.0 ms.\n- If this constraint is violated, the UE cannot decode PDCCH in time, causing PDSCH reception to abort.",
+      "verifiedAnswer": "1 PCell slot spans 2 SCell sub-slots (2n & 2n+1) | Targeted via K0 offset | Timing must obey Np,1 on slower numerology"
+    }
+  ],
+  "diagnosticPackets": [
+    {
+      "logCodeHex": "0xB887",
+      "name": "NR5G MAC PDSCH Status",
+      "layer": "5G NR MAC / PHY",
+      "description": "Real-time transport block decoding report. Shows TB size, number of MIMO layers, modulation order (QPSK/16QAM/64QAM/256QAM), and HARQ outcome.",
+      "keyFieldsToInspect": "TB Size, Modulation Order, MIMO Layers, HARQ Process ID, CRC Result (Pass/Fail/DTX)"
+    },
+    {
+      "logCodeHex": "0xB883",
+      "name": "NR5G MAC UL Physical Channel Schedule Report",
+      "layer": "5G NR MAC",
+      "description": "Real-time uplink scheduling decisions. Tracks UL grants, PUSCH TBS, and Buffer Status Report (BSR) transmissions.",
+      "keyFieldsToInspect": "Grant Size, PUSCH PRB allocation, BSR Buffer Size, Power Headroom (PHR)"
+    },
+    {
+      "logCodeHex": "0xB821",
+      "name": "NR5G RRC OTA Packet",
+      "layer": "5G NR RRC",
+      "description": "Complete decoded ASN.1 over-the-air signaling messages. Used to audit cell group and bearer configurations.",
+      "keyFieldsToInspect": "RRCReconfiguration, ServingCellConfig, BWP-Downlink, CrossCarrierSchedulingConfig, pdsch-TimeDomainAllocationList"
+    },
+    {
+      "logCodeHex": "0xB825",
+      "name": "NR5G RRC Configuration Info",
+      "layer": "5G NR RRC",
+      "description": "Parsed active radio configuration database. Shows MCG and SCG cell IDs, bearer mappings, and security keys.",
+      "keyFieldsToInspect": "MCG/SCG Bearer IDs, Active Cell Group, Security Algorithms, SCell State"
+    },
+    {
+      "logCodeHex": "0xB97F",
+      "name": "NR5G ML1 Searcher Measurement Database Update Ext",
+      "layer": "5G NR PHY / Beam",
+      "description": "L1 beam management tracking database. Contains real-time L1-RSRP for all SSB and CSI-RS beams, and active TCI states.",
+      "keyFieldsToInspect": "SSB Index, L1-RSRP (dBm), Active TCI State, Beam Failure Instance Counter"
+    },
+    {
+      "logCodeHex": "0xB173",
+      "name": "LTE MAC DL Transport Block",
+      "layer": "4G LTE MAC",
+      "description": "LTE counterpart for DL TB decoding. Essential during EN-DC Option 3x cross-RAT debugging to compare LTE vs NR BLER.",
+      "keyFieldsToInspect": "TB Size, MCS, HARQ Process ID, CRC Result"
+    },
+    {
+      "logCodeHex": "0xB14D",
+      "name": "LTE ML1 PDCCH DCI Decode",
+      "layer": "4G LTE PHY",
+      "description": "LTE DCI grant decode report. If grants are received in 0xB14D but no TB in 0xB173, PDSCH demodulation is failing.",
+      "keyFieldsToInspect": "DCI Format, RNTI, PRB Assignment, MCS"
+    },
+    {
+      "logCodeHex": "0xB139",
+      "name": "LTE ML1 PDSCH Demodulation Status",
+      "layer": "4G LTE PHY",
+      "description": "LTE per-layer SNR, CQI, rank estimation (RI), and modulation order.",
+      "keyFieldsToInspect": "SNR per Rx antenna, CQI reported, Rank Indicator"
+    }
+  ],
+  "systemDesigns": [
+    {
+      "id": "DESIGN_01",
+      "title": "Scalable 5G NR MAC Downlink Scheduler (125 µs Deadline)",
+      "latencyConstraint": "125 µs Hard Real-Time Deadline (120 kHz SCS)",
+      "summary": "Enterprise multi-threaded baseband scheduler designed for 1,000 active UEs, executing on isolated CPU cores under PREEMPT_RT Linux without dynamic memory allocation.",
+      "pipelineStages": [
+        "Stage 1: Feedback Ingestion (15 µs) - Process L1 UCI Indications (HARQ ACK/NACK, CQI/PMI), update OLLA offsets per UE, re-queue NACKed processes.",
+        "Stage 2: Time-Domain Candidate Filtering (20 µs) - Scan connected UEs, compute Proportional Fair metrics W_i = (R_i / Avg_R_i) · QoS_i, AVX-512 partial sort top 20 candidates.",
+        "Stage 3: Frequency-Domain Resource Allocation (45 µs) - Retransmissions prioritized, frequency-selective RBG allocation, TS 38.214 TBS lookup.",
+        "Stage 4: PDU Multiplexing & FAPI Dispatch (30 µs) - Assemble MAC subheaders + CEs, pull RLC SDUs via zero-copy descriptors, emit FAPI DL_TTI.request & TX_Data.request.",
+        "Stage 5: DMA Dispatch to L1 Accelerator (15 µs safety margin)."
+      ],
+      "memoryAndConcurrency": "CPU Cores 2-7 isolated (isolcpus). Thread affinity pinned. 1 GB hugepages for packet pools. Lock-free SPSC queues with memory_order_acquire/release between stages. Zero mallocs."
+    },
+    {
+      "id": "DESIGN_02",
+      "title": "Asynchronous Multi-Process DL HARQ Manager",
+      "latencyConstraint": "Sub-millisecond dynamic K1 dispatch across 128 processes",
+      "summary": "Manages 16 parallel HARQ processes per carrier across up to 8 component carriers (128 processes per UE) with Code Block Group (CBG) selective retransmission.",
+      "pipelineStages": [
+        "Process State Machine: IDLE → SCHEDULED → AWAITING_FEEDBACK → (ACK → IDLE) or (NACK → RETRANSMIT_PENDING).",
+        "Single-Cycle Bitwise Allocation: 16-bit bitmask free_process_mask. int pid = __builtin_ctz(free_process_mask); free_process_mask &= ~(1u << pid);",
+        "CBG Selective Tracking: Tracks up to 8 CBGs per TB. On partial NACK, retransmits only corrupted CBGs via CBGTI, saving 75-80% radio resources."
+      ],
+      "memoryAndConcurrency": "Bitmask manipulation in L1 cache. Lock-free atomic state updates. Fixed circular buffer descriptors."
+    },
+    {
+      "id": "DESIGN_03",
+      "title": "High-Throughput Inter-Thread L2 IPC Architecture",
+      "latencyConstraint": "Zero mutex contention, < 1 µs queue handoff",
+      "summary": "Real-time communication pipeline connecting L1 Driver, MAC Scheduler, and RLC AM Entity over shared memory without kernel system calls.",
+      "pipelineStages": [
+        "Lock-free SPSC ring buffers placed in shared memory (shm_open) between producer and consumer threads.",
+        "Acquire/Release memory order prevents CPU bus locking while ensuring cache coherency.",
+        "Credit-based backpressure: MAC grants buffer credits to RLC based on air-interface throughput; RLC throttles PDCP pulls when credits drop to zero."
+      ],
+      "memoryAndConcurrency": "alignas(64) on queue heads and tails eliminates false sharing. EventFD for low-jitter wakeups."
+    },
+    {
+      "id": "DESIGN_04",
+      "title": "Inter-Site CA Coordination over Non-Ideal Backhaul (ML Optimization)",
+      "latencyConstraint": "0.42 ms ML inference budget (within 1 ms TTI)",
+      "summary": "Predicts secondary cell (SCell) scheduling events over 10-20 ms non-ideal backhaul to optimize primary cell (PCell) PUCCH Format 3 allocations, developed by Akhzar Farhan at IISc Bangalore.",
+      "pipelineStages": [
+        "Bottleneck: PCell must allocate PUCCH resources for SCell HARQ without knowing SCell subframe decisions in advance.",
+        "ML Architecture: Gradient-Boosted Decision Tree trained on buffer occupancy, flow variance, and arrival rate.",
+        "Embedded Deployment: Compiled into an ultra-compact ~280 KB native C binary via Treelite.",
+        "Performance: Inference runs in 0.42 ms. Raised scheduling hit rate from 42% to 91% and cut PUCCH waste from 58% to 6.4%."
+      ],
+      "memoryAndConcurrency": "Native C decision tree with branch prediction optimization. Zero heap allocations during inference."
+    }
+  ]
+}

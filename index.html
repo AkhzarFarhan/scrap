@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-font="serif" data-scale="standard">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern C++23 Systems &amp; 3GPP 5G NR L2 Baseband Engineering Handbook</title>
+
+  <!-- Google Fonts for Editorial Book Serif, Technical UI Sans, and Monospace Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+
+  <!-- Interactive Screen Stylesheet & Official Hardcover Book Print Stylesheet -->
+  <link rel="stylesheet" href="styles/screen.css">
+  <link rel="stylesheet" href="styles/print.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       Sticky Command Topbar (Hidden in @media print)
+       ======================================================================== -->
+  <header class="app-topbar no-print">
+    <div class="topbar-brand" id="topbar-brand-home" title="Return to Executive Study Dashboard">
+      <div class="brand-emblem">C++ / 5G</div>
+      <div class="brand-text">
+        <div class="brand-title">C++23 &amp; 3GPP 5G NR L2 Engineering Handbook</div>
+        <div class="brand-subtitle">Ubiverse Complete Compendium • 36 Chapters • Print-Ready Book Edition</div>
+      </div>
+    </div>
+
+    <div class="topbar-controls">
+      <!-- Global Search Trigger -->
+      <button class="search-trigger-btn" id="btn-open-search" title="Search across all 36 chapters, 3GPP clauses, C++ code &amp; 115 Q&amp;As (Ctrl+K)">
+        <span>🔍 Search chapters, 3GPP clauses, code...</span>
+        <kbd>Ctrl+K</kbd>
+      </button>
+
+      <!-- Overall Mastery Progress Pill -->
+      <div class="progress-pill" title="Overall Study &amp; Question Mastery Progress">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="topbar-progress-fill" style="width: 0%;"></div>
+        </div>
+        <span id="topbar-progress-text">0%</span>
+      </div>
+
+      <!-- Active Recall Toggle -->
+      <button class="btn" id="btn-toggle-recall" title="Hide answers by default for active recall self-testing">
+        <span>👁️</span> Active Recall: OFF
+      </button>
+
+      <!-- Mock Exam / Quiz Trigger -->
+      <button class="btn" id="btn-open-quiz" title="Launch Interactive Mock Quiz (888 C++ MCQs &amp; 115 5G NR Q&amp;As)">
+        <span>⚡</span> Mock Quiz
+      </button>
+
+      <!-- On-Screen Official Book Preview Toggle -->
+      <button class="btn" id="btn-toggle-book-mode" title="Preview the exact multi-page hardcover book layout on screen">
+        <span>📖</span> Book Preview Mode
+      </button>
+
+      <!-- Official Book Print / Save to PDF Button -->
+      <button class="btn btn-primary" id="btn-open-print" title="Configure &amp; Print Official Hardcover Book Edition (or Save as PDF)">
+        <span>🖨️</span> Print / Save Official Book PDF
+      </button>
+
+      <!-- Theme, Typography & Font Scale Controls -->
+      <select class="topbar-select" id="select-theme" title="Color Theme (Print always uses crisp white paper)">
+        <option value="light">☀️ Paper Light</option>
+        <option value="sepia">📜 Warm Sepia</option>
+        <option value="dark">🌙 Slate Dark</option>
+      </select>
+
+      <select class="topbar-select" id="select-font" title="Body Prose Font">
+        <option value="serif">Serif (Book)</option>
+        <option value="sans">Sans (Technical)</option>
+      </select>
+
+      <select class="topbar-select" id="select-scale" title="Font Size Scale">
+        <option value="compact">Compact</option>
+        <option value="standard" selected>Standard</option>
+        <option value="large">Large</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       Main 3-Column Study & Book Workspace
+       ======================================================================== -->
+  <div class="app-shell">
+    <!-- Left Hierarchical Curriculum Sidebar (Hidden in @media print) -->
+    <aside class="app-sidebar no-print" id="sidebar-nav-content" aria-label="Handbook Curriculum Navigation">
+      <!-- Populated dynamically by app.js -->
+    </aside>
+
+    <!-- Center Book Canvas (Rendered as interactive chapter or full multi-volume book) -->
+    <main class="app-main" id="main-canvas">
+      <div style="padding: 48px; text-align: center; color: var(--text-muted);">
+        Loading C++23 &amp; 3GPP 5G NR Compendium Bundle...
+      </div>
+    </main>
+
+    <!-- Right-Hand Section Outline (Hidden in @media print) -->
+    <aside class="app-outline no-print" aria-label="Chapter Section Outline">
+      <div class="outline-header">On This Page / Chapter</div>
+      <div id="page-outline-links"></div>
+    </aside>
+  </div>
+
+  <!-- ========================================================================
+       Modal 1: Instant Global Search (Ctrl+K)
+       ======================================================================== -->
+  <div class="modal-backdrop no-print" id="modal-search">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-title">🔍 Search C++23 Chapters, 3GPP Clauses, QXDM Logs &amp; 115 Q&amp;As</div>
+        <button class="btn" data-close-modal="modal-search">✕ Esc</button>
+      </div>
+      <div class="modal-body">
+        <input
+          type="text"
+          id="global-search-input"
+          class="search-modal-input"
+          placeholder="Type any topic (e.g., SLIV, OLLA, vtable, std::atomic, HARQ, 0xB823, SCell, Ericsson, Apple)..."
+          autocomplete="off"
+        >
+        <div id="global-search-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       Modal 2: Official Technical Book Print & PDF Edition Selector
+       ======================================================================== -->
+  <div class="modal-backdrop no-print" id="modal-print">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-title">🖨️ Official Technical Book Print &amp; PDF Typesetting Engine</div>
+        <button class="btn" data-close-modal="modal-print">✕ Close</button>
+      </div>
+      <div class="modal-body">
+        <p class="prose-p" style="margin-bottom: 14px;">
+          Select which edition of the handbook you want to format and print (or save as an official book PDF). In print mode, the webpage automatically generates the <strong>Hardcover Title Page</strong>, <strong>Normative Standards Colophon</strong>, <strong>Dotted-Leader Table of Contents</strong>, <strong>Part Dividers</strong>, <strong>Running Headers</strong>, and <strong>expands all hidden interview answers</strong>.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg-subtle);border:1.5px solid var(--border-strong);border-radius:8px;cursor:pointer;">
+            <input type="radio" name="print-scope" value="all" checked style="margin-top:4px;accent-color:var(--accent-primary);">
+            <div>
+              <div style="font-weight:800;font-size:0.94rem;color:var(--text-primary);">Complete Three-Volume Omnibus Edition (All 36 Chapters — Recommended)</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Includes Cover + Colophon + TOC + Volume I (21 Days C++ &amp; DSA) + Volume II (10 Weeks 5G NR MAC &amp; CA) + Volume III (Protocol Lab, QXDM Logs, 4 System Designs, Top 15 &amp; 115 Q&amp;As, Career Playbook).</div>
+            </div>
+          </label>
+
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg-subtle);border:1.5px solid var(--border-strong);border-radius:8px;cursor:pointer;">
+            <input type="radio" name="print-scope" value="vol2" style="margin-top:4px;accent-color:var(--accent-primary);">
+            <div>
+              <div style="font-weight:800;font-size:0.94rem;color:var(--text-primary);">Volumes II &amp; III Only — 3GPP 5G NR L2 MAC, Carrier Aggregation, QXDM &amp; 115 Q&amp;As (Chapters 22–36)</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Focused telecom baseband edition with Cover, Colophon, TOC, 40 3GPP Spec Deep Dives, Math Drills, QXDM Diagnostics, 4 L2 System Designs, 115 Questions, and Career Playbook.</div>
+            </div>
+          </label>
+
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg-subtle);border:1.5px solid var(--border-strong);border-radius:8px;cursor:pointer;">
+            <input type="radio" name="print-scope" value="vol1" style="margin-top:4px;accent-color:var(--accent-primary);">
+            <div>
+              <div style="font-weight:800;font-size:0.94rem;color:var(--text-primary);">Volume I Only — Modern C++17/20/23, Low-Latency Systems &amp; FAANG DSA (Chapters 1–21)</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Focused C++ systems edition with Cover, Colophon, TOC, 92 Sections, 93 Code Listings, and 194 Senior C++ Interview Q&amp;As.</div>
+            </div>
+          </label>
+
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg-subtle);border:1.5px solid var(--border-strong);border-radius:8px;cursor:pointer;">
+            <input type="radio" name="print-scope" value="current" style="margin-top:4px;accent-color:var(--accent-primary);">
+            <div>
+              <div style="font-weight:800;font-size:0.94rem;color:var(--text-primary);">Current Active Chapter Offprint Only</div>
+              <div style="font-size:0.82rem;color:var(--text-secondary);">Prints only the currently selected chapter with the official Cover Sheet and Colophon.</div>
+            </div>
+          </label>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:6px;cursor:pointer;margin-bottom:18px;">
+          <input type="checkbox" id="print-include-mcqs" style="accent-color:var(--accent-primary);">
+          <span style="font-size:0.86rem;color:var(--text-primary);">
+            <strong>Include all 888 Rapid-Fire C++ Multiple-Choice Questions in Print</strong> (Uncheck for a leaner ~220-page textbook focused on Explanations, Code Listings &amp; Interview Q&amp;As; check for the full ~380-page omnibus).
+          </span>
+        </label>
+
+        <aside class="callout-box callout-tips" style="margin-bottom:18px;">
+          <div class="callout-header">
+            <span class="callout-icon">💡</span>
+            <span class="callout-title">Browser Print Dialog Tip for Best Book Output</span>
+          </div>
+          <ul class="callout-list">
+            <li>Destination: Choose <strong>"Save as PDF"</strong> (or your physical printer).</li>
+            <li>Paper Size: <strong>A4</strong> (or Letter), Scale: <strong>Default (100%)</strong>.</li>
+            <li>Enable <strong>"Background graphics"</strong> so callout tint boxes, syntax badges, and OFDM slot diagrams render with crisp editorial shading.</li>
+          </ul>
+        </aside>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <button class="btn" id="btn-preview-book-edition">📖 Preview This Edition On Screen</button>
+          <button class="btn btn-primary" id="btn-execute-print">🖨️ Launch Official Book Print / Save PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       Modal 3: Interactive Mock Exam & Flashcard Quiz Engine
+       ======================================================================== -->
+  <div class="modal-backdrop no-print" id="modal-quiz">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-title">⚡ Senior Engineering Mock Quiz (888 C++ MCQs &amp; 115 5G NR Q&amp;As)</div>
+        <button class="btn" data-close-modal="modal-quiz">✕ Close</button>
+      </div>
+      <div class="modal-body" id="quiz-modal-body">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline Data Bundle + Core Formatter + Application Engine -->
+  <script src="data/handbook_bundle.js"></script>
+  <script src="js/formatter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
