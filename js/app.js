@@ -25,7 +25,6 @@
     activeRecall: false,
     bookPreviewMode: false,
     printScope: "all", // 'all' | 'vol1' | 'vol2' | 'current'
-    includeMcqsInPrint: false,
     completedCppSubtopics: {},
     completedNrTopics: {},
     masteredQuestions: {},
@@ -93,12 +92,6 @@
     return d.topic || d.title || `Day ${d.day}`;
   }
 
-  function getDayMcqs(d) {
-    const subMcqs = (d.subtopics || []).flatMap((s) => s.mcqs || []);
-    if (subMcqs.length > 0) return subMcqs;
-    return d.mcqs || [];
-  }
-
   // Compute totals
   const totalCppSubtopics = cppDays.reduce((acc, d) => acc + (d.subtopics ? d.subtopics.length : 0), 0);
   const totalCppQuestions = cppDays.reduce(
@@ -112,7 +105,6 @@
         : 0),
     0
   );
-  const totalCppMcqs = cppDays.reduce((acc, d) => acc + getDayMcqs(d).length, 0);
   const totalNrTopics = nrWeeks.reduce((acc, w) => acc + (w.topics ? w.topics.length : 0), 0);
   const totalNrQuestions = nrQuestions.length;
 
@@ -150,7 +142,6 @@
 
     body.classList.toggle("active-recall-mode", !!state.activeRecall);
     body.classList.toggle("book-preview-mode", !!state.bookPreviewMode);
-    body.classList.toggle("exclude-mcqs-in-print", !state.includeMcqsInPrint);
 
     // Sync topbar buttons
     const btnRecall = document.getElementById("btn-toggle-recall");
@@ -424,8 +415,11 @@
     const dayNum = dayObj.day;
     const dayTitle = getDayTitle(dayObj);
     const subtopics = dayObj.subtopics || [];
-    const mcqs = getDayMcqs(dayObj);
     const viewId = `cpp-day-${dayNum}`;
+    const totalDayQas = subtopics.reduce(
+      (acc, s) => acc + ((s.questions || s.interview_questions || []).length),
+      0
+    );
 
     const sectionsHtml = subtopics
       .map((sub, idx) => {
@@ -567,59 +561,6 @@
       })
       .join("");
 
-    const mcqsHtml =
-      mcqs.length > 0
-        ? `
-          <section class="book-section mcq-section-block" id="sec-day-${dayNum}-mcqs" data-outline-id="sec-day-${dayNum}-mcqs" data-outline-label="§ ${dayNum}.${subtopics.length + 1} Rapid-Fire MCQs (${mcqs.length})">
-            <div class="section-header-row">
-              <div class="section-title-group">
-                <div class="section-badge-row">
-                  <span class="section-number-badge">§ ${dayNum}.${subtopics.length + 1}</span>
-                  <span class="section-spec-badge">${mcqs.length} Assessment Items</span>
-                </div>
-                <h2 class="section-title">Chapter ${dayNum} Rapid-Fire Multiple Choice Verification (${mcqs.length} Questions)</h2>
-              </div>
-              <div class="section-actions no-print">
-                <button class="btn btn-primary" data-launch-day-quiz="${dayNum}">⚡ Launch Interactive Day ${dayNum} Quiz</button>
-              </div>
-            </div>
-            <div class="mcq-grid">
-              ${mcqs
-                .map((m, mIdx) => {
-                  const opts = m.options || [];
-                  const correctIdx =
-                    m.correct_option !== undefined ? Number(m.correct_option) : Number(m.correct_answer);
-                  const letters = ["A", "B", "C", "D", "E", "F"];
-                  return `
-                    <div class="mcq-card" data-mcq-correct="${correctIdx}">
-                      <div class="mcq-q-text">
-                        <span class="mcq-num">#${mIdx + 1}</span>
-                        ${FMT.renderInlineMarkdown(m.question)}
-                      </div>
-                      <div class="mcq-options">
-                        ${opts
-                          .map(
-                            (opt, oIdx) => `
-                              <div class="mcq-opt ${oIdx === correctIdx ? "is-correct-opt" : ""}" data-mcq-opt="${oIdx}">
-                                <span class="mcq-opt-letter">${letters[oIdx] || oIdx + 1}.</span>
-                                <span>${FMT.renderInlineMarkdown(opt)}</span>
-                              </div>
-                            `
-                          )
-                          .join("")}
-                      </div>
-                      <div class="mcq-exp">
-                        <strong>✓ Answer (${letters[correctIdx] || correctIdx + 1}):</strong> ${FMT.renderInlineMarkdown(m.explanation || "")}
-                      </div>
-                    </div>
-                  `;
-                })
-                .join("")}
-            </div>
-          </section>
-        `
-        : "";
-
     return `
       <article class="book-chapter" id="chapter-anchor-${viewId}">
         <div class="chapter-running-header">
@@ -630,13 +571,12 @@
           <div class="chapter-meta-row">
             <span class="chapter-number-pill">Volume I • Chapter ${dayNum} (Day ${dayNum} of 21)</span>
             <span class="chapter-hours-pill">⏱ ${dayObj.estimated_hours || 5} Hours Intensive</span>
-            <span class="chapter-hours-pill">📚 ${subtopics.length} Sections • ${mcqs.length} MCQs</span>
+            <span class="chapter-hours-pill">📚 ${subtopics.length} Sections • ${totalDayQas} Interview Q&As</span>
           </div>
           <h1 class="chapter-title">Chapter ${dayNum}: ${FMT.escapeHtml(dayTitle)}</h1>
           <p class="chapter-summary">Comprehensive deep-dive across ${subtopics.map((s) => `<strong>${FMT.escapeHtml(s.title)}</strong>`).join(" • ")}.</p>
         </header>
         ${sectionsHtml}
-        ${mcqsHtml}
         ${!isFullBookRender ? renderPager(viewId) : ""}
       </article>
     `;
@@ -1551,7 +1491,7 @@
             <div class="kpi-card">
               <div class="kpi-label">Volume I: Modern C++ & DSA</div>
               <div class="kpi-value">21 Days / 92 §</div>
-              <div class="kpi-sub">114 Hours • 93 Code Listings • 194 Q&As • 888 MCQs (${prog.doneCpp}/${totalCppSubtopics} Done)</div>
+              <div class="kpi-sub">114 Hours • 93 Code Listings • 194 Senior Q&As (${prog.doneCpp}/${totalCppSubtopics} Done)</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Volume II: 3GPP 5G NR MAC & CA</div>
@@ -1642,7 +1582,7 @@
                     <div class="lab-card-header" style="padding:12px 14px;">
                       <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--accent-primary);">CHAPTER ${d.day} • C++ DAY ${d.day} (${d.estimated_hours}h)</div>
                       <div class="lab-card-title" style="font-size:0.92rem;">${FMT.escapeHtml(getDayTitle(d))}</div>
-                      <div class="lab-card-sub">${(d.subtopics || []).length} Sections • ${getDayMcqs(d).length} MCQs</div>
+                      <div class="lab-card-sub">${(d.subtopics || []).length} Sections • ${(d.subtopics || []).reduce((a, s) => a + ((s.questions || s.interview_questions || []).length), 0)} Interview Q&As</div>
                     </div>
                   </div>
                 `
@@ -1694,7 +1634,7 @@
               <div class="cover-vol-box">
                 <div class="cover-vol-box-num">VOLUME I • CHAPTERS 1–21 (114 HOURS)</div>
                 <div class="cover-vol-box-title">Modern C++17/20/23, Low-Latency Memory Model, Lock-Free Concurrency &amp; FAANG DSA</div>
-                <div class="cover-vol-box-desc">92 Normative Sections • 93 Allman-Formatted Code Listings • 194 Senior Interview Q&amp;As • 888 Verification MCQs • 283 Undefined Behavior &amp; Compiler Traps</div>
+                <div class="cover-vol-box-desc">92 Normative Sections • 93 Allman-Formatted Code Listings • 194 Senior Interview Q&amp;As • 283 Undefined Behavior &amp; Compiler Traps</div>
               </div>
               <div class="cover-vol-box">
                 <div class="cover-vol-box-num">VOLUME II • CHAPTERS 22–31 (10 WEEKS / 40 CLAUSES)</div>
@@ -1815,7 +1755,7 @@
                         <span class="toc-entry-code">Chapter ${d.day}</span>
                         <span class="toc-entry-title">Day ${d.day}: ${FMT.escapeHtml(getDayTitle(d))}</span>
                         <span class="toc-entry-dots"></span>
-                        <span class="toc-entry-meta">${(d.subtopics || []).length} § • ${getDayMcqs(d).length} MCQs • ${d.estimated_hours}h</span>
+                        <span class="toc-entry-meta">${(d.subtopics || []).length} § • ${(d.subtopics || []).reduce((a, s) => a + ((s.questions || s.interview_questions || []).length), 0)} Q&As • ${d.estimated_hours}h</span>
                       </div>
                     `
                   )
@@ -2089,36 +2029,7 @@
       });
     });
 
-    // 10. Interactive MCQ option selection
-    mainEl.querySelectorAll(".mcq-card").forEach((card) => {
-      const correctIdx = Number(card.getAttribute("data-mcq-correct"));
-      card.querySelectorAll(".mcq-opt").forEach((opt) => {
-        opt.addEventListener("click", () => {
-          const chosenIdx = Number(opt.getAttribute("data-mcq-opt"));
-          card.classList.add("revealed");
-          card.querySelectorAll(".mcq-opt").forEach((o) => {
-            o.classList.remove("selected-correct", "selected-wrong");
-          });
-          if (chosenIdx === correctIdx) {
-            opt.classList.add("selected-correct");
-          } else {
-            opt.classList.add("selected-wrong");
-            const rightEl = card.querySelector(`.mcq-opt[data-mcq-opt="${correctIdx}"]`);
-            if (rightEl) rightEl.classList.add("selected-correct");
-          }
-        });
-      });
-    });
-
-    // 11. Launch Day-specific MCQ Quiz
-    mainEl.querySelectorAll("[data-launch-day-quiz]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const dayNum = Number(btn.getAttribute("data-launch-day-quiz"));
-        openQuizModal("cpp", dayNum);
-      });
-    });
-
-    // 12. Interactive SLIV & OLLA Calculators
+    // 10. Interactive SLIV & OLLA Calculators
     const slivSInput = document.getElementById("input-sliv-s");
     const slivLInput = document.getElementById("input-sliv-l");
     const slivDecInput = document.getElementById("input-sliv-decode");
@@ -2354,9 +2265,6 @@
     scopeRadios.forEach((r) => {
       r.checked = r.value === state.printScope;
     });
-
-    const mcqCheck = document.getElementById("print-include-mcqs");
-    if (mcqCheck) mcqCheck.checked = !!state.includeMcqsInPrint;
   }
 
   function closePrintModal() {
@@ -2372,7 +2280,6 @@
     const wasBookPreview = state.bookPreviewMode;
     // Render the chosen full book scope into the canvas
     mainEl.innerHTML = renderFullBookEdition(state.printScope);
-    document.body.classList.toggle("exclude-mcqs-in-print", !state.includeMcqsInPrint);
 
     setTimeout(() => {
       window.print();
@@ -2397,24 +2304,23 @@
   });
 
   // =========================================================================
-  // Interactive Mock Exam / Quiz Modal (888 C++ MCQs + 115 5G NR Q&As)
+  // Active Recall Technical Interview Flashcard Drill (309 Senior Q&As)
   // =========================================================================
 
   let quizSession = {
-    mode: "cpp", // 'cpp' | 'nr'
-    dayFilter: "all",
+    mode: "nr", // 'nr' | 'cpp'
     pool: [],
     currentIndex: 0,
     score: 0,
     answered: 0,
-    selectedOpt: null
+    revealed: false
   };
 
-  function openQuizModal(mode = "cpp", dayFilter = "all") {
+  function openQuizModal(mode = "nr") {
     const modal = document.getElementById("modal-quiz");
     if (!modal) return;
     modal.classList.add("open");
-    startQuizSession(mode, dayFilter);
+    startQuizSession(mode);
   }
 
   function closeQuizModal() {
@@ -2422,27 +2328,33 @@
     if (modal) modal.classList.remove("open");
   }
 
-  function startQuizSession(mode, dayFilter) {
+  function startQuizSession(mode = "nr") {
     quizSession.mode = mode;
-    quizSession.dayFilter = dayFilter;
     quizSession.currentIndex = 0;
     quizSession.score = 0;
     quizSession.answered = 0;
-    quizSession.selectedOpt = null;
+    quizSession.revealed = false;
 
     if (mode === "cpp") {
-      let allMcqs = [];
+      let allCppQas = [];
       for (const d of cppDays) {
-        if (dayFilter === "all" || Number(dayFilter) === d.day) {
-          for (const m of getDayMcqs(d)) {
-            allMcqs.push({ ...m, day: d.day, dayTitle: getDayTitle(d) });
+        for (const s of d.subtopics || []) {
+          for (const q of (s.questions || s.interview_questions || [])) {
+            allCppQas.push({
+              id: `CPP_${d.day}_${allCppQas.length + 1}`,
+              category: `C++ Day ${d.day}: ${getDayTitle(d)}`,
+              subcategory: s.title,
+              question: q.question,
+              detailedAnswer: q.answer,
+              codeOrSpecRef: "ISO/IEC 14882 C++20/23",
+              targetCompanyRelevance: "Tier-1 Systems / Baseband Core"
+            });
           }
         }
       }
-      // Shuffle
-      quizSession.pool = allMcqs.sort(() => Math.random() - 0.5).slice(0, 25);
+      quizSession.pool = allCppQas.sort(() => Math.random() - 0.5).slice(0, 20);
     } else {
-      quizSession.pool = [...nrQuestions].sort(() => Math.random() - 0.5).slice(0, 25);
+      quizSession.pool = [...nrQuestions].sort(() => Math.random() - 0.5).slice(0, 20);
     }
 
     renderQuizModalBody();
@@ -2454,165 +2366,109 @@
 
     const total = quizSession.pool.length;
     if (total === 0) {
-      bodyEl.innerHTML = `<p>No questions available for this filter.</p>`;
+      bodyEl.innerHTML = `<p style="padding:20px;text-align:center;color:var(--text-muted);">No interview questions available for this module.</p>`;
       return;
     }
 
     const item = quizSession.pool[quizSession.currentIndex];
-    const letters = ["A", "B", "C", "D", "E"];
+    const revealed = !!quizSession.revealed;
 
-    let controlsBar = `
+    const controlsBar = `
       <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);">
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn ${quizSession.mode === "cpp" ? "btn-primary" : ""}" id="quiz-switch-cpp">C++ 888 MCQ Exam</button>
-          <button class="btn ${quizSession.mode === "nr" ? "btn-primary" : ""}" id="quiz-switch-nr">5G NR 115 Q&A Drill</button>
+          <button class="btn ${quizSession.mode === "nr" ? "btn-primary" : ""}" id="quiz-switch-nr">📡 5G NR Telecom &amp; RTOS Drill (115 Q&amp;As)</button>
+          <button class="btn ${quizSession.mode === "cpp" ? "btn-primary" : ""}" id="quiz-switch-cpp">💻 Modern C++23 Systems Drill (194 Q&amp;As)</button>
         </div>
         <div style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;color:var(--accent-primary);">
-          Question ${quizSession.currentIndex + 1} / ${total} • Score: ${quizSession.score} / ${quizSession.answered}
+          Card ${quizSession.currentIndex + 1} / ${total} • Mastered: ${quizSession.score} / ${quizSession.answered}
         </div>
       </div>
     `;
 
-    if (quizSession.mode === "cpp") {
-      const correctIdx =
-        item.correct_option !== undefined ? Number(item.correct_option) : Number(item.correct_answer);
-      const isAnswered = quizSession.selectedOpt !== null;
+    bodyEl.innerHTML = `
+      ${controlsBar}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <span class="section-spec-badge">${FMT.escapeHtml(item.id)} • ${FMT.escapeHtml(item.category)}</span>
+        <span class="section-spec-badge">📜 ${FMT.escapeHtml(item.codeOrSpecRef)}</span>
+        <span class="section-spec-badge">🏢 ${FMT.escapeHtml(item.targetCompanyRelevance)}</span>
+      </div>
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:18px;line-height:1.5;color:var(--text-primary);">
+        ${FMT.renderInlineMarkdown(item.question)}
+      </div>
+      ${
+        !revealed
+          ? `
+            <div style="background:var(--bg-subtle);border:1.5px dashed var(--border-strong);border-radius:8px;padding:32px 20px;text-align:center;margin-bottom:18px;">
+              <p style="font-size:0.92rem;color:var(--text-muted);margin-bottom:14px;">Formulate your technical answer in your head or on paper, then reveal to verify.</p>
+              <button class="btn btn-primary" id="quiz-reveal-btn" style="padding:10px 24px;font-size:0.95rem;">👁️ Reveal Verbatim Technical Model Answer</button>
+            </div>
+          `
+          : `
+            <div style="padding:16px;background:var(--bg-subtle);border:1px solid var(--border-strong);border-radius:8px;margin-bottom:16px;">
+              <div style="font-size:0.78rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-primary);margin-bottom:8px;">✓ Technical Model Answer &amp; 3GPP/C++ Reference:</div>
+              ${FMT.renderFormattedContentBlock(item.detailedAnswer)}
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:16px;">
+              <button class="btn btn-primary" id="quiz-mark-mastered">✓ I Nailed It (Mark Mastered)</button>
+              <button class="btn" id="quiz-mark-review">○ Need More Review</button>
+            </div>
+          `
+      }
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+        <button class="btn" id="quiz-prev-btn" ${quizSession.currentIndex === 0 ? "disabled" : ""}>← Previous Card</button>
+        <button class="btn btn-primary" id="quiz-next-btn">${quizSession.currentIndex < total - 1 ? "Next Card →" : "New Random Batch ↻"}</button>
+      </div>
+    `;
 
-      bodyEl.innerHTML = `
-        ${controlsBar}
-        <div style="margin-bottom:10px;">
-          <span class="section-spec-badge">Day ${item.day}: ${FMT.escapeHtml(item.dayTitle)}</span>
-        </div>
-        <div style="font-size:1.05rem;font-weight:700;margin-bottom:16px;line-height:1.5;">
-          ${FMT.renderInlineMarkdown(item.question)}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
-          ${(item.options || [])
-            .map((opt, oIdx) => {
-              let cls = "mcq-opt";
-              if (isAnswered) {
-                if (oIdx === correctIdx) cls += " selected-correct";
-                else if (oIdx === quizSession.selectedOpt) cls += " selected-wrong";
-              }
-              return `
-                <div class="${cls}" data-quiz-opt="${oIdx}" style="padding:10px 14px;font-size:0.92rem;">
-                  <span class="mcq-opt-letter">${letters[oIdx] || oIdx + 1}.</span>
-                  <span>${FMT.renderInlineMarkdown(opt)}</span>
-                </div>
-              `;
-            })
-            .join("")}
-        </div>
-        ${
-          isAnswered
-            ? `
-              <aside class="callout-box callout-tips" style="margin-bottom:16px;">
-                <div class="callout-header">
-                  <span class="callout-icon">✓</span>
-                  <span class="callout-title">Explanation (Correct Answer: ${letters[correctIdx]})</span>
-                </div>
-                <div class="callout-body">${FMT.renderInlineMarkdown(item.explanation || "")}</div>
-              </aside>
-            `
-            : ""
-        }
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <button class="btn" id="quiz-prev-btn" ${quizSession.currentIndex === 0 ? "disabled" : ""}>← Previous</button>
-          <button class="btn btn-primary" id="quiz-next-btn">${quizSession.currentIndex < total - 1 ? "Next Question →" : "Restart New Batch ↻"}</button>
-        </div>
-      `;
-
-      bodyEl.querySelectorAll("[data-quiz-opt]").forEach((optEl) => {
-        optEl.addEventListener("click", () => {
-          if (quizSession.selectedOpt !== null) return;
-          const chosen = Number(optEl.getAttribute("data-quiz-opt"));
-          quizSession.selectedOpt = chosen;
-          quizSession.answered++;
-          if (chosen === correctIdx) quizSession.score++;
-          renderQuizModalBody();
-        });
+    const revBtn = document.getElementById("quiz-reveal-btn");
+    if (revBtn) {
+      revBtn.addEventListener("click", () => {
+        quizSession.revealed = true;
+        renderQuizModalBody();
       });
-    } else {
-      const revealed = quizSession.selectedOpt === true;
-      bodyEl.innerHTML = `
-        ${controlsBar}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-          <span class="section-spec-badge">${FMT.escapeHtml(item.id)} • ${FMT.escapeHtml(item.category)}</span>
-          <span class="section-spec-badge">📜 ${FMT.escapeHtml(item.codeOrSpecRef)}</span>
-          <span class="section-spec-badge">🏢 ${FMT.escapeHtml(item.targetCompanyRelevance)}</span>
-        </div>
-        <div style="font-size:1.05rem;font-weight:700;margin-bottom:16px;line-height:1.5;">
-          ${FMT.renderInlineMarkdown(item.question)}
-        </div>
-        ${
-          !revealed
-            ? `<button class="btn btn-primary" id="quiz-reveal-nr" style="width:100%;justify-content:center;padding:12px;">👁️ Reveal Verbatim 3GPP & C++ Model Answer</button>`
-            : `
-              <div style="padding:16px;background:var(--bg-subtle);border:1px solid var(--border-strong);border-radius:8px;margin-bottom:16px;">
-                ${FMT.renderFormattedContentBlock(item.detailedAnswer)}
-              </div>
-              <div style="display:flex;gap:10px;margin-bottom:16px;">
-                <button class="btn btn-primary" id="quiz-mark-mastered">✓ I Nailed It (Mark Mastered)</button>
-                <button class="btn" id="quiz-mark-review">○ Need More Review</button>
-              </div>
-            `
-        }
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
-          <button class="btn" id="quiz-prev-btn" ${quizSession.currentIndex === 0 ? "disabled" : ""}>← Previous</button>
-          <button class="btn btn-primary" id="quiz-next-btn">${quizSession.currentIndex < total - 1 ? "Next Question →" : "New Random Batch ↻"}</button>
-        </div>
-      `;
+    }
 
-      const revBtn = document.getElementById("quiz-reveal-nr");
-      if (revBtn) {
-        revBtn.addEventListener("click", () => {
-          quizSession.selectedOpt = true;
+    const masterBtn = document.getElementById("quiz-mark-mastered");
+    if (masterBtn) {
+      masterBtn.addEventListener("click", () => {
+        state.masteredQuestions[item.id] = true;
+        saveState();
+        updateTopbarProgress();
+        renderSidebar();
+        quizSession.answered++;
+        quizSession.score++;
+        if (quizSession.currentIndex < total - 1) {
+          quizSession.currentIndex++;
+          quizSession.revealed = false;
           renderQuizModalBody();
-        });
-      }
+        }
+      });
+    }
 
-      const masterBtn = document.getElementById("quiz-mark-mastered");
-      if (masterBtn) {
-        masterBtn.addEventListener("click", () => {
-          state.masteredQuestions[item.id] = true;
-          saveState();
-          updateTopbarProgress();
-          renderSidebar();
-          quizSession.answered++;
-          quizSession.score++;
-          if (quizSession.currentIndex < total - 1) {
-            quizSession.currentIndex++;
-            quizSession.selectedOpt = null;
-            renderQuizModalBody();
-          }
-        });
-      }
-
-      const revAgainBtn = document.getElementById("quiz-mark-review");
-      if (revAgainBtn) {
-        revAgainBtn.addEventListener("click", () => {
-          quizSession.answered++;
-          if (quizSession.currentIndex < total - 1) {
-            quizSession.currentIndex++;
-            quizSession.selectedOpt = null;
-            renderQuizModalBody();
-          }
-        });
-      }
+    const revAgainBtn = document.getElementById("quiz-mark-review");
+    if (revAgainBtn) {
+      revAgainBtn.addEventListener("click", () => {
+        quizSession.answered++;
+        if (quizSession.currentIndex < total - 1) {
+          quizSession.currentIndex++;
+          quizSession.revealed = false;
+          renderQuizModalBody();
+        }
+      });
     }
 
     const switchCpp = document.getElementById("quiz-switch-cpp");
-    if (switchCpp) switchCpp.addEventListener("click", () => startQuizSession("cpp", "all"));
+    if (switchCpp) switchCpp.addEventListener("click", () => startQuizSession("cpp"));
 
     const switchNr = document.getElementById("quiz-switch-nr");
-    if (switchNr) switchNr.addEventListener("click", () => startQuizSession("nr", "all"));
+    if (switchNr) switchNr.addEventListener("click", () => startQuizSession("nr"));
 
     const prevBtn = document.getElementById("quiz-prev-btn");
     if (prevBtn) {
       prevBtn.addEventListener("click", () => {
         if (quizSession.currentIndex > 0) {
           quizSession.currentIndex--;
-          quizSession.selectedOpt = null;
+          quizSession.revealed = false;
           renderQuizModalBody();
         }
       });
@@ -2623,10 +2479,10 @@
       nextBtn.addEventListener("click", () => {
         if (quizSession.currentIndex < total - 1) {
           quizSession.currentIndex++;
-          quizSession.selectedOpt = null;
+          quizSession.revealed = false;
           renderQuizModalBody();
         } else {
-          startQuizSession(quizSession.mode, quizSession.dayFilter);
+          startQuizSession(quizSession.mode);
         }
       });
     }
@@ -2696,8 +2552,6 @@
       btnExecPrint.addEventListener("click", () => {
         const chosenScope = document.querySelector('input[name="print-scope"]:checked');
         if (chosenScope) state.printScope = chosenScope.value;
-        const mcqChk = document.getElementById("print-include-mcqs");
-        if (mcqChk) state.includeMcqsInPrint = mcqChk.checked;
         saveState();
         applyPreferencesToDOM();
         executeOfficialBookPrint();
@@ -2709,8 +2563,6 @@
       btnPreviewEdition.addEventListener("click", () => {
         const chosenScope = document.querySelector('input[name="print-scope"]:checked');
         if (chosenScope) state.printScope = chosenScope.value;
-        const mcqChk = document.getElementById("print-include-mcqs");
-        if (mcqChk) state.includeMcqsInPrint = mcqChk.checked;
         state.bookPreviewMode = true;
         saveState();
         closePrintModal();

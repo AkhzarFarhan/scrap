@@ -48,9 +48,9 @@
         <span>👁️</span> Active Recall: OFF
       </button>
 
-      <!-- Mock Exam / Quiz Trigger -->
-      <button class="btn" id="btn-open-quiz" title="Launch Interactive Mock Quiz (888 C++ MCQs &amp; 115 5G NR Q&amp;As)">
-        <span>⚡</span> Mock Quiz
+      <!-- Active Recall Technical Interview Drill Trigger -->
+      <button class="btn" id="btn-open-quiz" title="Launch Active Recall Technical Interview Drill (309 Senior 5G &amp; C++ Questions)">
+        <span>⚡</span> Interview Drill
       </button>
 
       <!-- On-Screen Official Book Preview Toggle -->
@@ -176,13 +176,6 @@
           </label>
         </div>
 
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:6px;cursor:pointer;margin-bottom:18px;">
-          <input type="checkbox" id="print-include-mcqs" style="accent-color:var(--accent-primary);">
-          <span style="font-size:0.86rem;color:var(--text-primary);">
-            <strong>Include all 888 Rapid-Fire C++ Multiple-Choice Questions in Print</strong> (Uncheck for a leaner ~220-page textbook focused on Explanations, Code Listings &amp; Interview Q&amp;As; check for the full ~380-page omnibus).
-          </span>
-        </label>
-
         <aside class="callout-box callout-tips" style="margin-bottom:18px;">
           <div class="callout-header">
             <span class="callout-icon">💡</span>
@@ -204,12 +197,12 @@
   </div>
 
   <!-- ========================================================================
-       Modal 3: Interactive Mock Exam & Flashcard Quiz Engine
+       Modal 3: Interactive Active Recall Technical Interview Drill
        ======================================================================== -->
   <div class="modal-backdrop no-print" id="modal-quiz">
     <div class="modal-panel">
       <div class="modal-header">
-        <div class="modal-title">⚡ Senior Engineering Mock Quiz (888 C++ MCQs &amp; 115 5G NR Q&amp;As)</div>
+        <div class="modal-title">⚡ Senior Engineering Technical Interview Drill (309 High-Yield Q&amp;As)</div>
         <button class="btn" data-close-modal="modal-quiz">✕ Close</button>
       </div>
       <div class="modal-body" id="quiz-modal-body">
