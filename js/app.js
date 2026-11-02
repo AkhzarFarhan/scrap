@@ -232,12 +232,12 @@
         </div>
         <a href="cpp_cheatsheet.html" target="_blank" class="nav-item" style="text-decoration:none; color:inherit;">
           <span class="nav-item-code">CARD</span>
-          <span class="nav-item-title">⚡ C++ 4-Page Cheatsheet</span>
+          <span class="nav-item-title">⚡ C++ 2-Page Cheatsheet</span>
           <span class="nav-item-badge">PRINT</span>
         </a>
         <a href="nr_cheatsheet.html" target="_blank" class="nav-item" style="text-decoration:none; color:inherit;">
           <span class="nav-item-code">CARD</span>
-          <span class="nav-item-title">📡 5G NR 4-Page Cheatsheet</span>
+          <span class="nav-item-title">📡 5G NR 2-Page Cheatsheet</span>
           <span class="nav-item-badge">PRINT</span>
         </a>
       </div>
@@ -1537,14 +1537,14 @@
             </div>
           </div>
 
-          <!-- Standalone 4-Page Print Master Cheatsheets Showcase -->
+          <!-- Standalone 2-Page Print Master Cheatsheets Showcase -->
           <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:18px 22px;margin-bottom:26px;box-shadow:var(--shadow-sm);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
               <div>
                 <span style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:var(--accent-primary);text-transform:uppercase;letter-spacing:0.05em;">Standalone Quick-Reference Cards</span>
-                <h3 style="font-size:1.05rem;margin:2px 0 4px 0;color:var(--text-primary);font-weight:800;">⚡ 4-Page Print Master Cheatsheets (Ultra-High-Yield Standalone Cards)</h3>
+                <h3 style="font-size:1.05rem;margin:2px 0 4px 0;color:var(--text-primary);font-weight:800;">⚡ 2-Page Print Master Cheatsheets (Ultra-Dense Front &amp; Back)</h3>
                 <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
-                  Ultra-dense, concise 4-page technical cheat sheets engineered for immediate interview revision and desk reference. Formatted to print exactly onto 4 A4 pages with zero overflow.
+                  Ultra-dense, zero-empty-space 2-page technical reference cards engineered for immediate interview revision and desk reference. Formatted to print exactly onto 2 A4 pages (front and back) with zero overflow.
                 </p>
               </div>
             </div>
@@ -1553,7 +1553,7 @@
                 <div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--accent-primary);">VOLUME I COMPANION</span>
-                    <span style="font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--accent-primary-soft);color:var(--accent-primary);">4 A4 PAGES</span>
+                    <span style="font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--accent-primary-soft);color:var(--accent-primary);">2 A4 PAGES</span>
                   </div>
                   <div style="font-weight:800;font-size:0.96rem;color:var(--text-primary);margin-bottom:4px;">⚡ Modern C++20/23 Systems Engineering Cheatsheet</div>
                   <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.35;">
@@ -1568,7 +1568,7 @@
                 <div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--accent-secondary);">VOLUME II &amp; III COMPANION</span>
-                    <span style="font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--accent-secondary-soft);color:var(--accent-secondary);">4 A4 PAGES</span>
+                    <span style="font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--accent-secondary-soft);color:var(--accent-secondary);">2 A4 PAGES</span>
                   </div>
                   <div style="font-weight:800;font-size:0.96rem;color:var(--text-primary);margin-bottom:4px;">📡 3GPP 5G NR Rel-16/17 L2 MAC &amp; CA Cheatsheet</div>
                   <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.35;">
