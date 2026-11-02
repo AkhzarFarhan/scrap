@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3GPP 5G NR Rel-16/17 L2 MAC & Baseband — 4-Page Master Cheatsheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       3GPP 5G NR Rel-16/17 L2 MAC 4-Page Technical Cheatsheet Stylesheet
+       ========================================================================== */
+    :root {
+      --bg-page: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-card-sub: #f1f5f9;
+      --bg-code: #0f172a;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-code: #f8fafc;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --primary: #0369a1; /* Telecom Cyan/Blue */
+      --primary-soft: #f0f9ff;
+      --secondary: #047857; /* Emerald Green */
+      --secondary-soft: #ecfdf5;
+      --accent: #b45309; /* Amber */
+      --accent-soft: #fefce8;
+      --danger: #b91c1c; /* Crimson */
+      --danger-soft: #fef2f2;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      --font-serif: 'Merriweather', Georgia, Cambria, serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #0b1120;
+      --bg-card: #111c33;
+      --bg-card-sub: #1e293b;
+      --bg-code: #030712;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-code: #f8fafc;
+      --border: #334155;
+      --border-strong: #475569;
+      --primary: #38bdf8;
+      --primary-soft: #0c4a6e33;
+      --secondary: #34d399;
+      --secondary-soft: #064e3b33;
+      --accent: #fbbf24;
+      --accent-soft: #78350f33;
+      --danger: #f87171;
+      --danger-soft: #7f1d1d33;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #475569;
+      font-family: var(--font-sans);
+      color: var(--text-main);
+      font-size: 8.4pt;
+      line-height: 1.32;
+      padding: 16px 0 60px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Screen Topbar Navigation */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #ffffff;
+      width: 100%;
+      max-width: 210mm;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+
+    .toolbar-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #f8fafc;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #94a3b8;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    /* A4 Cheatsheet Page Container */
+    .sheet-page {
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+      margin-bottom: 24px;
+      padding: 8mm 8mm 7mm 8mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Header & Footer on each page */
+    .page-header {
+      border-bottom: 2px solid var(--text-main);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-left-title {
+      font-family: var(--font-serif);
+      font-size: 10.8pt;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-sub {
+      font-size: 6.8pt;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-badge {
+      background: var(--primary);
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 6.8pt;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .page-footer {
+      border-top: 1px solid var(--border-strong);
+      padding-top: 3px;
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 6.5pt;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    /* Multi-column layout */
+    .content-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .col-flex {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* Cheatsheet Technical Card */
+    .cs-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 6px;
+      font-size: 7.7pt;
+    }
+
+    .cs-card-header {
+      font-family: var(--font-sans);
+      font-size: 8.1pt;
+      font-weight: 800;
+      color: var(--primary);
+      border-bottom: 1.5pt solid var(--primary);
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cs-card-header.accent {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .cs-card-header.secondary {
+      color: var(--secondary);
+      border-color: var(--secondary);
+    }
+
+    .cs-card-header.danger {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .cs-pill {
+      font-family: var(--font-mono);
+      font-size: 6.2pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 2px;
+      background: var(--border);
+      color: var(--text-main);
+    }
+
+    /* Lists & Prose */
+    .cs-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .cs-list li {
+      position: relative;
+      padding-left: 9px;
+      margin-bottom: 2.2px;
+      line-height: 1.25;
+    }
+
+    .cs-list li::before {
+      content: "•";
+      position: absolute;
+      left: 1px;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .cs-list.danger li::before {
+      color: var(--danger);
+      content: "✗";
+      font-size: 6.5pt;
+    }
+
+    .cs-list.check li::before {
+      color: var(--secondary);
+      content: "✓";
+      font-size: 6.5pt;
+    }
+
+    p {
+      margin-bottom: 2.5px;
+      line-height: 1.26;
+    }
+
+    strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* Tables */
+    .cs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.1pt;
+      margin: 2.5px 0;
+    }
+
+    .cs-table th,
+    .cs-table td {
+      border: 1px solid var(--border);
+      padding: 2px 3.5px;
+      text-align: left;
+      line-height: 1.18;
+    }
+
+    .cs-table th {
+      background: var(--bg-card-sub);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Code & Formulas */
+    code, .inline-code {
+      font-family: var(--font-mono);
+      font-size: 7.1pt;
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border);
+      padding: 0.5px 2.5px;
+      border-radius: 2px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    pre.code-block {
+      background: var(--bg-code);
+      color: var(--text-code);
+      font-family: var(--font-mono);
+      font-size: 6.7pt;
+      line-height: 1.22;
+      padding: 3.5px 5.5px;
+      border-radius: 3px;
+      margin: 2.5px 0;
+      overflow: hidden;
+      white-space: pre-wrap;
+    }
+
+    .formula-box {
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--primary);
+      padding: 3.5px 6px;
+      margin: 2.5px 0;
+      font-family: var(--font-mono);
+      font-size: 7.1pt;
+      line-height: 1.25;
+      color: var(--text-main);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .callout {
+      border-left: 2.5px solid var(--primary);
+      background: var(--primary-soft);
+      padding: 3px 5px;
+      margin: 2.5px 0;
+      border-radius: 0 3px 3px 0;
+      font-size: 7.3pt;
+      line-height: 1.23;
+    }
+
+    .callout.danger {
+      border-left-color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .callout.secondary {
+      border-left-color: var(--secondary);
+      background: var(--secondary-soft);
+    }
+
+    .callout.accent {
+      border-left-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Exact Print Rules (4 A4 Pages, Zero Overflow) */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm 8mm;
+      }
+
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      .toolbar {
+        display: none !important;
+      }
+
+      .sheet-page {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 284mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 0 4mm 0 !important;
+        margin: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Navigation Bar (Hidden in Print) -->
+  <div class="toolbar">
+    <div class="toolbar-title">
+      <span>📡 3GPP 5G NR Rel-16/17 L2 MAC Cheatsheet</span>
+      <span style="font-size:0.75rem;font-weight:400;color:#94a3b8;">(4-Page Print Master)</span>
+    </div>
+    <div class="toolbar-actions">
+      <a href="index.html" class="btn">🏠 Full Handbook</a>
+      <a href="cpp_cheatsheet.html" class="btn">⚡ C++ Cheatsheet</a>
+      <button class="btn" id="btn-theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       PAGE 1: ARCHITECTURE, NUMEROLOGY, FRAME GRID & RESOURCE ALLOCATION
+       ======================================================================== -->
+  <div class="sheet-page" id="nr-page-1">
+    <header class="page-header">
+      <div>
+        <div class="header-left-title">3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering</div>
+        <div class="header-sub">PAGE 1: PROTOCOL STACK, NUMEROLOGIES, FRAME GEOMETRY & RESOURCE ALLOCATION</div>
+      </div>
+      <div class="header-badge">3GPP TS 38.300 / 38.211 / 38.214</div>
+    </header>
+
+    <div class="content-grid-2">
+      <!-- Left Column -->
+      <div class="col-flex">
+        <!-- 1. Protocol Stack & Functional Splits -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>1. Protocol Architecture & Functional Splits</span>
+            <span class="cs-pill">L2 Baseband</span>
+          </div>
+          <p><strong>Radio Protocol Stack (User Plane):</strong></p>
+          <ul class="cs-list">
+            <li><strong>SDAP (TS 37.324):</strong> QoS Flow $\leftrightarrow$ Data Radio Bearer (DRB) mapping; reflective QoS marking.</li>
+            <li><strong>PDCP (TS 38.323):</strong> Sequence numbering, ciphering (AES/SNOW3G), integrity, ROHC header compression, in-order delivery, re-ordering, split-bearer duplicate discard.</li>
+            <li><strong>RLC (TS 38.322):</strong> TM (Transparent), UM (Unacknowledged), AM (Acknowledged). ARQ retransmission, segmentation (no re-segmentation in MAC), SDU discard timer.</li>
+            <li><strong>MAC (TS 38.321):</strong> Logical channel prioritization (LCP), HARQ with CBG, dynamic/configured multiplexing, random access (RACH), timing advance (TA), BWP switching, DRX, beam failure recovery, Carrier Aggregation (CA).</li>
+          </ul>
+          <div class="callout secondary">
+            <strong>O-RAN & 3GPP Split Options:</strong><br>
+            • <strong>Option 2 (3GPP Rel-15):</strong> High-layer split: CU (PDCP/SDAP/RRC) $\leftrightarrow$ F1 interface $\leftrightarrow$ DU (RLC/MAC/High-PHY).<br>
+            • <strong>Option 7.2x (O-RAN WG4):</strong> Lower-layer split: DU (MAC + High-PHY FFT/iFFT/Scrambling/Modulation) $\leftrightarrow$ Fronthaul eCPRI $\leftrightarrow$ RU (Low-PHY Beamforming + RF).<br>
+            • <strong>Small Cell Forum FAPI P7:</strong> Slot-by-slot MAC $\leftrightarrow$ PHY real-time interface (<code>DL_TTI.request</code>, <code>UL_TTI.request</code>, <code>TX_Data.request</code>, <code>RX_Data.indication</code>).
+          </div>
+        </div>
+
+        <!-- 2. Channel Mapping Architecture -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>2. Channel Mapping Hierarchy</span>
+            <span class="cs-pill">Logical $\to$ Transport $\to$ Physical</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>Logical (What info)</th><th>Transport (How delivered)</th><th>Physical (Radio REs)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>BCCH</strong> (Broadcast Control)</td><td><strong>BCH</strong> (MIB) / <strong>DL-SCH</strong> (SIB1)</td><td><strong>PBCH</strong> (SSB) / <strong>PDSCH</strong></td></tr>
+              <tr><td><strong>PCCH</strong> (Paging Control)</td><td><strong>PCH</strong> (Paging)</td><td><strong>PDSCH</strong> (P-RNTI PDCCH)</td></tr>
+              <tr><td><strong>CCCH / DCCH</strong> (Signaling)</td><td><strong>DL-SCH / UL-SCH</strong></td><td><strong>PDSCH / PUSCH</strong></td></tr>
+              <tr><td><strong>DTCH</strong> (User Plane Data)</td><td><strong>DL-SCH / UL-SCH</strong></td><td><strong>PDSCH / PUSCH</strong></td></tr>
+              <tr><td><em>Control Signaling (L1/L2)</em></td><td><em>No Transport Channel</em></td><td><strong>PDCCH</strong> (DCI) / <strong>PUCCH</strong> (UCI)</td></tr>
+              <tr><td><em>Access Preamble</em></td><td><strong>RACH</strong></td><td><strong>PRACH</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. Frame & Slot Time-Domain Structure -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>3. Frame & Slot Time-Domain Geometry</span>
+            <span class="cs-pill">TS 38.211</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Radio Frame:</strong> $T_f = 10\text{ ms} = \frac{\Delta f_{\max} \cdot N_f}{100} \cdot T_c = 10\text{ subframes}$. Constant across all numerologies.</li>
+            <li><strong>Subframe:</strong> $T_{\text{sf}} = 1.0\text{ ms}$. Exact unit of time across all numerologies.</li>
+            <li><strong>Slot Duration:</strong> $T_{\text{slot}} = \frac{1}{2^\mu}\text{ ms}$. Contains exactly <strong>14 OFDM symbols</strong> for Normal CP (12 for Extended CP, $\mu=2$ only).</li>
+            <li><strong>Mini-Slot (Non-slot based):</strong> 2, 4, or 7 symbols. Enables sub-1ms ultra-low latency URLLC transmission and pre-emption of scheduled eMBB traffic.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-flex">
+        <!-- 4. Scalable Numerology Matrix -->
+        <div class="cs-card">
+          <div class="cs-card-header accent">
+            <span>4. Scalable Numerology ($\mu$) Matrix</span>
+            <span class="cs-pill">TS 38.211 §4.2</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>$\mu$</th><th>$\Delta f$ (kHz)</th><th>$T_{\text{slot}}$</th><th>Slots/Subfr</th><th>Slots/Frame</th><th>Max BW</th><th>Deployment Band</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>0</strong></td><td>15</td><td>1.0 ms</td><td>1</td><td>10</td><td>50 MHz</td><td>FR1 Sub-3 GHz (FDD coverage)</td></tr>
+              <tr><td><strong>1</strong></td><td>30</td><td>0.5 ms</td><td>2</td><td>20</td><td>100 MHz</td><td>FR1 C-band (TDD 3.5GHz n78)</td></tr>
+              <tr><td><strong>2</strong></td><td>60</td><td>0.25 ms</td><td>4</td><td>40</td><td>100 MHz</td><td>FR1 High / FR2 (Ext CP option)</td></tr>
+              <tr><td><strong>3</strong></td><td>120</td><td>0.125 ms</td><td>8</td><td>80</td><td>400 MHz</td><td>FR2 mmWave (28/39 GHz eMBB)</td></tr>
+              <tr><td><strong>4</strong></td><td>240</td><td>0.0625 ms</td><td>16</td><td>160</td><td>400 MHz</td><td>FR2 SSB beam-sweeping search</td></tr>
+            </tbody>
+          </table>
+          <div class="formula-box">
+            $\Delta f = 15 \times 2^\mu\text{ kHz} \quad\Big|\quad T_{\text{slot}} = \frac{1}{2^\mu}\text{ ms} \quad\Big|\quad T_s = \frac{1}{\Delta f_{\max} \cdot N_f} \approx 0.509\text{ ns}$
+          </div>
+        </div>
+
+        <!-- 5. Bandwidth Parts (BWP) Framework -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>5. Bandwidth Parts (BWP) Operation</span>
+            <span class="cs-pill">TS 38.213 §12</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Definition:</strong> Contiguous subset of PRBs sharing a single numerology ($\mu$) on a given component carrier. Max <strong>4 BWPs</strong> configured in DL and UL; exactly <strong>1 active BWP</strong> at any instant.</li>
+            <li><strong>Initial BWP:</strong> Used for Initial Access, SIB1 decoding (RMSI), and RACH prior to dedicated RRC. Derived from CORESET#0 / Type0-PDCCH.</li>
+            <li><strong>Active BWP:</strong> Dedicated UE operational BWP for high-throughput data transfer.</li>
+            <li><strong>Default BWP:</strong> Fallback BWP when <code>bwp-InactivityTimer</code> expires. Prevents high battery drain on wideband (100MHz) when traffic is idle.</li>
+            <li><strong>Dormant BWP:</strong> Rel-16 SCell state where UE stops PDCCH monitoring but continues CQI/CSI measurements and AGC, enabling sub-millisecond reactivation.</li>
+            <li><strong>Switching Mechanisms:</strong> DCI format 1_1/0_1 (BWP indicator field, 1-2 bits), <code>bwp-InactivityTimer</code> timeout, RRC reconfiguration, or RACH initiation.</li>
+          </ul>
+        </div>
+
+        <!-- 6. Resource Allocation Types: Time (SLIV) & Frequency -->
+        <div class="cs-card">
+          <div class="cs-card-header secondary">
+            <span>6. Resource Allocation: SLIV & Frequency Domain</span>
+            <span class="cs-pill">TS 38.214 §5.1.2</span>
+          </div>
+          <p><strong>Time Domain (SLIV - Start and Length Indicator Value):</strong></p>
+          <div class="formula-box">
+            $\text{If } (L - 1) \le 7 \implies \mathbf{\text{SLIV} = 14 \cdot (L - 1) + S}$<br>
+            $\text{Else } \implies \mathbf{\text{SLIV} = 14 \cdot (14 - L + 1) + (14 - 1 - S)}$
+          </div>
+          <p style="font-size:7.1pt;color:var(--text-muted);margin-top:2px;">
+            Where $S \in [0..13]$ is start symbol and $L \in [1..14]$ is contiguous symbol length ($S + L \le 14$). Single 7-bit field encodes all 105 valid combinations.
+          </p>
+          <p style="margin-top:3px;"><strong>Frequency Domain Allocation:</strong></p>
+          <ul class="cs-list">
+            <li><strong>Type 0 (Bitmap):</strong> RBG bitmap allocation. RBG size $P \in \{2, 4, 8, 16\}$ PRBs based on BWP size Configuration 1 or 2. Flexible frequency selectivity for Proportional Fair.</li>
+            <li><strong>Type 1 (RIV - Resource Indication Value):</strong> Contiguous PRB allocation encoded as compact integer:
+              $$\text{If } (L_{\text{RBs}} - 1) \le \lfloor N_{\text{BWP}}^{\text{size}}/2 \rfloor \implies \text{RIV} = N_{\text{BWP}}^{\text{size}}(L_{\text{RBs}} - 1) + \text{RB}_{\text{start}}$$
+              $$\text{Else } \implies \text{RIV} = N_{\text{BWP}}^{\text{size}}(N_{\text{BWP}}^{\text{size}} - L_{\text{RBs}} + 1) + (N_{\text{BWP}}^{\text{size}} - 1 - \text{RB}_{\text{start}})$$
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering Compendium</span>
+      <span>Confidential & Proprietary — Job Switch Quick Reference</span>
+      <span>Page 1 of 4</span>
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       PAGE 2: 125 µs REAL-TIME MAC SCHEDULING, HARQ & LINK ADAPTATION
+       ======================================================================== -->
+  <div class="sheet-page" id="nr-page-2">
+    <header class="page-header">
+      <div>
+        <div class="header-left-title">3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering</div>
+        <div class="header-sub">PAGE 2: 125 µs MAC PIPELINE, HARQ-ACK RETRANSMISSION & LINK ADAPTATION (OLLA)</div>
+      </div>
+      <div class="header-badge">3GPP TS 38.321 / 38.212 / 38.213</div>
+    </header>
+
+    <div class="content-grid-2">
+      <!-- Left Column -->
+      <div class="col-flex">
+        <!-- 1. Real-Time 125 µs Slot Scheduling Pipeline -->
+        <div class="cs-card">
+          <div class="cs-card-header danger">
+            <span>1. Real-Time 125 µs Slot Scheduling Pipeline</span>
+            <span class="cs-pill">FR2 120 kHz / 4× FR1 30 kHz</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>Phase & Budget</th><th>Functional Stage</th><th>Hardware / DSP hot-path Execution</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>0–15 µs</strong> (12%)</td>
+                <td><strong>UCI Ingestion & Triage</strong></td>
+                <td>Parse incoming PUCCH/PUSCH UCI: HARQ-ACK bitmasks, SR bits, periodic/aperiodic CSI reports, wideband & subband CQI, PMI, RI.</td>
+              </tr>
+              <tr>
+                <td><strong>15–35 µs</strong> (16%)</td>
+                <td><strong>Proportional Fair Prioritization</strong></td>
+                <td>Calculate scheduling weight: $\omega_i = \frac{R_i^\alpha}{T_i^\beta} \cdot \mu_{\text{QoS}}$. Update LCP token buckets ($B_j$). Rank active UEs in QoS priority tiers.</td>
+              </tr>
+              <tr>
+                <td><strong>35–80 µs</strong> (36%)</td>
+                <td><strong>RBG Allocation, MCS & TBS</strong></td>
+                <td>Match channel matrix to RBGs. OLLA SNR adjustment ($\text{SNR}_{\text{eff}} = \text{SNR} + \Delta_{\text{OLLA}}$). Determine MCS, code rate $R$, modulate $Q_m$, calculate TBS (TS 38.214).</td>
+              </tr>
+              <tr>
+                <td><strong>80–110 µs</strong> (24%)</td>
+                <td><strong>MAC PDU Multiplex & FAPI</strong></td>
+                <td>Assemble MAC subheaders, CEs (TA, SCell Act, BSR), poll RLC SDUs. Serialize FAPI P7 messages (<code>DL_TTI.req</code>, <code>TX_Data.req</code>).</td>
+              </tr>
+              <tr>
+                <td><strong>110–125 µs</strong> (12%)</td>
+                <td><strong>PCIe DMA & Boundary Guard</strong></td>
+                <td>Program PCIe scatter-gather DMA descriptors into DSP circular rings. Flush CPU write-combining buffers; verify hardware deadline met.</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout danger">
+            <strong>Hot-Path RTOS Rule:</strong> Zero dynamic heap allocations (<code>malloc</code>/<code>new</code>) in the 125 µs scheduling hot-path. All descriptors, UE contexts, and TB containers pre-allocated in static, cache-aligned contiguous rings.
+          </div>
+        </div>
+
+        <!-- 2. Downlink HARQ Architecture & Timing -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>2. Downlink HARQ Protocol Mechanics</span>
+            <span class="cs-pill">TS 38.213 / 38.321</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Asynchronous Dynamic Timing ($K_1$):</strong> Downlink HARQ is fully asynchronous. The slot offset $K_1$ between PDSCH reception and PUCCH HARQ-ACK transmission is dynamically signalled in DCI (0 to 15 slots).</li>
+            <li><strong>HARQ Processes:</strong> Up to <strong>16 parallel Stop-and-Wait processes</strong> per carrier per UE. Process ID indicated in DCI (4 bits).</li>
+            <li><strong>New Data Indicator (NDI):</strong> Toggled bit indicates a new transmission; non-toggled indicates a retransmission of the active HARQ buffer.</li>
+            <li><strong>Redundancy Versions (RV):</strong> LDPC circular buffer rate matching.
+              <div class="formula-box">
+                $\text{Standard Retransmission Sequence: } \mathbf{RV_0 \longrightarrow RV_2 \longrightarrow RV_3 \longrightarrow RV_1}$
+              </div>
+              • $RV_0$: Full systematic bits (highest decoding probability if SNR is good).<br>
+              • $RV_2$: Parity-heavy incremental redundancy (lowest code rate when combined).<br>
+              • $RV_3, RV_1$: Remaining parity bits for Chase Combining or IR.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-flex">
+        <!-- 3. Code Block Group (CBG) Retransmissions -->
+        <div class="cs-card">
+          <div class="cs-card-header secondary">
+            <span>3. Code Block Group (CBG) Retransmission</span>
+            <span class="cs-pill">TS 38.212 / 38.214</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Transport Block Segmentation:</strong> If TB size $> 3824$ bits (Base Graph 1) or $> 292$ bits, TB is segmented into Code Blocks (max $K_{cb} = 8448$ bits for BG1, $3840$ bits for BG2).</li>
+            <li><strong>CBG Grouping:</strong> RRC configures <code>maxCodeBlockGroupsPerTransportBlock</code> $\in \{2, 4, 6, 8\}$. CBs mapped uniformly into $N_{\text{CBG}}$ groups.</li>
+            <li><strong>CBGTI (Transmission Information):</strong> DCI bitmask where bit $k=1$ indicates CBG $k$ is retransmitted. Corrupt CBGs retransmitted individually rather than whole 100+ kB TB.</li>
+            <li><strong>CBGFI (Flush Indicator):</strong> Bit indicating whether previously corrupted CBGs in UE soft buffer should be flushed or combined.</li>
+          </ul>
+          <div class="callout secondary">
+            <strong>Baseband Efficiency Gain:</strong> In bursty interference or high Doppler channels, CBG retransmissions reduce retransmission radio overhead by <strong>75%–80%</strong>, preserving spectral efficiency.
+          </div>
+        </div>
+
+        <!-- 4. HARQ-ACK Codebook: Type-1 vs Type-2 -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>4. HARQ-ACK Codebook: Type-1 vs Type-2</span>
+            <span class="cs-pill">TS 38.213 §9.1</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>Dimension</th><th>Type-1 (Semi-Static)</th><th>Type-2 (Dynamic)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Payload Size</strong></td><td>Pre-calculated, fixed bit length based on all candidate PDSCH occasions.</td><td>Dynamic bit length based on actual scheduled DCI grants.</td></tr>
+              <tr><td><strong>Determination</strong></td><td>Cartesian product of configured $K_1$ set, TDRA candidates, and active BWPs.</td><td>Driven by Counter DAI (cDAI) and Total DAI (tDAI) fields in DCI (2 bits each).</td></tr>
+              <tr><td><strong>DCI Miss Detection</strong></td><td>Inherent: missed slots reported as NACK in fixed slot position.</td><td>Detected via gaps in modulo-4 cDAI counter. If last DCI missed, tDAI detects it.</td></tr>
+              <tr><td><strong>Overhead Cost</strong></td><td>High PUCCH payload overhead when traffic is sparse (transmits mostly NACKs).</td><td>Ultra-compact PUCCH payload; adapts to instantaneous scheduling bursts.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 5. Link Adaptation & Outer Loop Rate Control (OLLA) -->
+        <div class="cs-card">
+          <div class="cs-card-header accent">
+            <span>5. Link Adaptation & OLLA Convergence</span>
+            <span class="cs-pill">Closed-Form Math</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>CQI Reporting:</strong> 4-bit CQI index (Tables 1–3: QPSK up to 256-QAM) reporting highest MCS supporting $\le 10\%$ BLER.</li>
+            <li><strong>Effective SNR Formulation:</strong>
+              $$\text{SNR}_{\text{effective}} = \text{SNR}_{\text{reported}}(\text{CQI}) + \Delta_{\text{OLLA}} - \text{Margin}_{\text{safety}}$$
+            </li>
+            <li><strong>OLLA Step-Size Balance Equation:</strong>
+              <div class="formula-box">
+                $\mathbf{\Delta_{\text{down}} = \Delta_{\text{up}} \times \frac{\text{BLER}_{\text{target}}}{1 - \text{BLER}_{\text{target}}}} \iff \mathbf{\Delta_{\text{up}} = \Delta_{\text{down}} \times \frac{1 - \text{BLER}_{\text{target}}}{\text{BLER}_{\text{target}}}}$
+              </div>
+            </li>
+            <li><strong>Target 10% BLER ($\text{BLER} = 0.10$):</strong>
+              $$\Delta_{\text{down}} = \Delta_{\text{up}} \times \frac{0.10}{0.90} = \frac{\Delta_{\text{up}}}{9} \implies \mathbf{\Delta_{\text{up}} = 9 \times \Delta_{\text{down}}}$$
+              If $\Delta_{\text{down}} = 0.1\text{ dB (on ACK)} \implies \Delta_{\text{up}} = 0.9\text{ dB (on NACK)}$. Exactly <strong>9 consecutive ACKs</strong> are required to recover from a single NACK.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering Compendium</span>
+      <span>Confidential & Proprietary — Job Switch Quick Reference</span>
+      <span>Page 2 of 4</span>
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       PAGE 3: CARRIER AGGREGATION, ML PREDICTION & FIELD DIAGNOSTICS
+       ======================================================================== -->
+  <div class="sheet-page" id="nr-page-3">
+    <header class="page-header">
+      <div>
+        <div class="header-left-title">3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering</div>
+        <div class="header-sub">PAGE 3: CARRIER AGGREGATION, ML PREDICTION, QXDM TRACING & NACK STORM TRIAGE</div>
+      </div>
+      <div class="header-badge">3GPP TS 38.331 / FIELD TELEMETRY</div>
+    </header>
+
+    <div class="content-grid-2">
+      <!-- Left Column -->
+      <div class="col-flex">
+        <!-- 1. Carrier Aggregation (CA) Architecture -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>1. Carrier Aggregation (CA) Architecture</span>
+            <span class="cs-pill">TS 38.300 §5.5</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Cell Hierarchy:</strong> Primary Cell (<strong>PCell</strong>) controls RRC, security, NAS, and primary PUCCH. Secondary Cells (<strong>SCell</strong>, up to 15 CCs) add capacity. SpCell = PCell (MCG) or PSCell (SCG).</li>
+            <li><strong>Deployment Modes:</strong> Intra-band contiguous (adjacent spectrum in same band), Intra-band non-contiguous, Inter-band (e.g. n78 3.5 GHz TDD + n28 700 MHz FDD).</li>
+            <li><strong>Cross-Carrier Scheduling:</strong> PDCCH on scheduling cell allocates PDSCH/PUSCH on scheduled cell via <strong>3-bit Carrier Indicator Field (CIF)</strong>.</li>
+            <li><strong>Cross-Numerology Slot Mapping:</strong>
+              <div class="formula-box">
+                $n_{\text{scheduled}} = \lfloor n_{\text{scheduling}} \cdot 2^{\mu_{\text{scheduled}} - \mu_{\text{scheduling}}} \rfloor + K_0$
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 2. SCell Activation / Deactivation Mechanism -->
+        <div class="cs-card">
+          <div class="cs-card-header accent">
+            <span>2. SCell Activation / Deactivation Lifecycle</span>
+            <span class="cs-pill">TS 38.321 §5.9 / TS 38.133</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>RRC Configuration:</strong> Adds SCell to UE configuration in <em>deactivated</em> state.</li>
+            <li><strong>MAC CE Activation:</strong> 1-Octet ($LCID = 58$) for SCells 1–7, or 4-Octet ($LCID = 57$) for SCells 1–31. Bitmap field $C_i=1$ activates SCell ID $i$.</li>
+            <li><strong>Deactivation Timer (<code>sCellDeactivationTimer</code>):</strong> Configured per SCell ($20\text{ ms} \dots 1280\text{ ms}$). Reset upon any PDSCH scheduling grant on that SCell. Expiry automatically deactivates SCell to save UE battery.</li>
+            <li><strong>Activation Latency Budgets (TS 38.133 §8.3):</strong>
+              <br>• <strong>Known / Warm SCell:</strong> $T_{\text{activate}} \le 24\text{ ms}$ (recent CSI/fine timing valid).
+              <br>• <strong>Unknown / Cold SCell:</strong> $T_{\text{activate}} \le 34\text{ ms}$ (requires SSB beam search, AGC acquisition, timing sync before valid CSI reporting).
+            </li>
+          </ul>
+        </div>
+
+        <!-- 3. Ultra-Low Latency ML SCell Prediction with Treelite -->
+        <div class="cs-card">
+          <div class="cs-card-header secondary">
+            <span>3. ML SCell Prediction via Treelite Compilation</span>
+            <span class="cs-pill">Sub-15 µs Inference</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>The Problem:</strong> Python/XGBoost inference runtime ($>1.2\text{ ms}$) violates the 125 µs L2 MAC scheduling slot deadline and risks buffer overflow.</li>
+            <li><strong>Feature Vector ($X \in \mathbb{R}^{12}$):</strong> Instantaneous RSRP, RSRQ, Doppler spread, CQI variance, RLC buffer depth, packet arrival rate, historical SINR.</li>
+            <li><strong>Treelite Compilation Pipeline:</strong> Compiles decision tree ensemble (GBDT) into <strong>branchless C code</strong> with nested ternary expressions and AVX-512 vectorization.
+              <pre class="code-block"><span class="cmt">// Treelite generated C hot-path (zero malloc, zero branching)</span>
+<span class="type">float</span> <span class="func">predict_scell_activation</span>(<span class="kw">const</span> <span class="type">float</span>* f) {
+  <span class="type">float</span> sum = -<span class="num">0.4215f</span>;
+  sum += (f[<span class="num">0</span>] > -<span class="num">85.0f</span>) ? ((f[<span class="num">3</span>] > <span class="num">12.0f</span>) ? <span class="num">0.82f</span> : -<span class="num">0.15f</span>) : -<span class="num">0.91f</span>;
+  sum += (f[<span class="num">5</span>] > <span class="num">45000.0f</span>) ? <span class="num">0.65f</span> : -<span class="num">0.30f</span>; <span class="cmt">/* RLC buffer depth */</span>
+  <span class="kw">return</span> <span class="num">1.0f</span> / (<span class="num">1.0f</span> + <span class="func">expf</span>(-sum)); <span class="cmt">/* Sigmoid prob */</span>
+}</pre>
+            </li>
+            <li><strong>Production Impact:</strong> Inference latency drops from <strong>1.2 ms $\to$ &lt;15 µs</strong> ($80\times$ speedup). SCell pre-activation accuracy reaches <strong>91%</strong> under fading channels.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-flex">
+        <!-- 4. Qualcomm QXDM High-Yield Baseband Log Codes -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>4. Qualcomm QXDM Baseband Diagnostic Codes</span>
+            <span class="cs-pill">Modem Telemetry</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>Log Code</th><th>Subsystem</th><th>Critical Parsed Fields & Analysis Objective</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>0xB821</code></td>
+                <td><strong>NR MAC DL TB</strong></td>
+                <td>Carrier Index, TB Size, MCS, Num RBs, HARQ ID, RV ($0,2,3,1$), LCID subheaders. Verify transport block assembly.</td>
+              </tr>
+              <tr>
+                <td><code>0xB823</code></td>
+                <td><strong>NR MAC HARQ</strong></td>
+                <td>Process ID, RV, Flush Indicator, CBGTI bitmask, ACK/NACK/DTX status. Triage retransmission frequency.</td>
+              </tr>
+              <tr>
+                <td><code>0xB883</code></td>
+                <td><strong>NR ML1 SCell</strong></td>
+                <td>SCell ID, State (Deact $\to$ Act), Activation Delay timer, AGC lock status, first CSI report timestamp.</td>
+              </tr>
+              <tr>
+                <td><code>0xB887</code></td>
+                <td><strong>NR ML1 PDSCH</strong></td>
+                <td>Demod SNR, EVM, DMRS correlation, CRC Pass/Fail, LDPC Iteration Count. Distinguish noise vs interference.</td>
+              </tr>
+              <tr>
+                <td><code>0xB890</code></td>
+                <td><strong>NR MAC RACH</strong></td>
+                <td>Preamble ID, RA-RNTI, Target Power, RAPROC state machine, RAR reception window, Timing Advance (TA).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 5. 4-Step HARQ NACK Storm Root-Cause Protocol -->
+        <div class="cs-card">
+          <div class="cs-card-header danger">
+            <span>5. 4-Step HARQ NACK Storm Root-Cause Triage</span>
+            <span class="cs-pill">SOP Execution</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Step 1: Check DCI Grant Detection (PDCCH CCEs):</strong>
+              <br>• <em>Symptom:</em> Baseband detects DTX on PUCCH (UE sends nothing).
+              <br>• <em>Root Cause:</em> UE missed DCI grant due to low PDCCH Aggregation Level (AL 1/2 instead of AL 8/16) or beam misalignment in SSB/CSI-RS sweep.
+            </li>
+            <li><strong>Step 2: Check Link Adaptation & OLLA Convergence:</strong>
+              <br>• <em>Symptom:</em> Immediate NACK on $RV_0$; CRC failure across all PRBs.
+              <br>• <em>Root Cause:</em> Assigned MCS exceeds instant channel capacity. OLLA step $\Delta_{\text{up}}$ not aggressive enough, or CQI report delayed by $>20\text{ ms}$ during fast fading.
+            </li>
+            <li><strong>Step 3: Check PDSCH Demodulation & Co-Channel Interference:</strong>
+              <br>• <em>Symptom:</em> EVM degrades significantly on data REs while DMRS correlation remains intact.
+              <br>• <em>Root Cause:</em> Adjacent-cell co-channel interference on specific RBGs; Doppler-induced inter-carrier interference (ICI) at high speed ($>120\text{ km/h}$).
+            </li>
+            <li><strong>Step 4: Check Timing Advance (TA) Drift & PUCCH Sync:</strong>
+              <br>• <em>Symptom:</em> gNodeB decodes valid PDSCH CRC at UE side, but gNodeB logs NACK/DTX on PUCCH.
+              <br>• <em>Root Cause:</em> TA expired (<code>timeAlignmentTimer</code>), UE uplink symbol overlap causing FFT window clipping, or UL pathloss estimation error.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering Compendium</span>
+      <span>Confidential & Proprietary — Job Switch Quick Reference</span>
+      <span>Page 3 of 4</span>
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       PAGE 4: 4G/5G EVOLUTION, WHITEBOARD FORMULAS & INTERVIEW PITCH
+       ======================================================================== -->
+  <div class="sheet-page" id="nr-page-4">
+    <header class="page-header">
+      <div>
+        <div class="header-left-title">3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering</div>
+        <div class="header-sub">PAGE 4: 4G/5G EVOLUTION MATRIX, 8 SYSTEM FORMULAS & INTERVIEW DRILL CARDS</div>
+      </div>
+      <div class="header-badge">EXECUTIVE RECONCILIATION & INTERVIEW RIGOR</div>
+    </header>
+
+    <div class="content-grid-2">
+      <!-- Left Column -->
+      <div class="col-flex">
+        <!-- 1. 4G LTE vs 5G NR Fundamental Evolution Matrix -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>1. 4G LTE vs 5G NR Architectural Evolution</span>
+            <span class="cs-pill">Comparison Matrix</span>
+          </div>
+          <table class="cs-table">
+            <thead>
+              <tr><th>Dimension</th><th>4G LTE (Rel-8–14)</th><th>5G NR (Rel-15–17)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Numerology</strong></td><td>Fixed $\Delta f = 15\text{ kHz}$.</td><td>Scalable $\Delta f = 15 \cdot 2^\mu\text{ kHz}$ (15 to 240 kHz).</td></tr>
+              <tr><td><strong>Scheduling Slot</strong></td><td>Fixed 1.0 ms subframe (14 sym).</td><td>Flexible: 1.0ms down to 62.5µs; mini-slots (2, 4, 7 sym).</td></tr>
+              <tr><td><strong>Channel BW</strong></td><td>Max 20 MHz per CC.</td><td>Max 100 MHz (FR1) / 400 MHz (FR2) per CC.</td></tr>
+              <tr><td><strong>HARQ Scheme</strong></td><td>Sync UL, Async DL. Max 8 processes. Whole TB retransmissions.</td><td>Async adaptive DL & UL. Up to 16 processes. Code Block Group (CBG) partial retransmissions.</td></tr>
+              <tr><td><strong>Reference Signals</strong></td><td>Always-on Cell-specific Reference Signals (CRS). High interference floor.</td><td>Lean radio design: On-demand DMRS, CSI-RS, PRS. Zero always-on CRS.</td></tr>
+              <tr><td><strong>QoS Framework</strong></td><td>EPS Bearer-based QoS (QCI).</td><td>Flow-based QoS (5QI) managed by SDAP layer.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. The 8 Critical Whiteboard Baseband Formulas -->
+        <div class="cs-card">
+          <div class="cs-card-header accent">
+            <span>2. The 8 Critical Whiteboard Baseband Formulas</span>
+            <span class="cs-pill">Must Know by Heart</span>
+          </div>
+          <div class="formula-box" style="font-size:6.8pt;line-height:1.2;">
+            1. <strong>Numerology:</strong> $\Delta f = 15 \times 2^\mu\text{ kHz} \quad|\quad T_{\text{slot}} = \frac{1}{2^\mu}\text{ ms}$<br>
+            2. <strong>Time Allocation (SLIV):</strong><br>
+            $\quad \text{SLIV} = 14(L-1)+S \text{ if } (L-1)\le 7 \text{ else } 14(15-L)+(13-S)$<br>
+            3. <strong>OLLA Convergence:</strong> $\Delta_{\text{down}} = \Delta_{\text{up}} \times \frac{\text{BLER}}{1 - \text{BLER}}$<br>
+            4. <strong>Theoretical Peak Throughput (TS 38.306):</strong><br>
+            $\quad \text{Rate} = 10^{-6} \sum_{j=1}^J \left( v_{\text{layers}}^{(j)} \cdot Q_m^{(j)} \cdot f^{(j)} \cdot R_{\max} \cdot \frac{N_{\text{PRB}}^{\text{BW}(j),\mu} \cdot 12}{T_s^\mu} (1 - \text{OH}^{(j)}) \right)$<br>
+            5. <strong>LCP Token Bucket:</strong> $B_j = \min\big(B_j + \text{PBR}_j \times \Delta t,\, \text{BSD}_j\big)$<br>
+            6. <strong>Min HARQ RTT:</strong> $\text{RTT} = K_1 + K_2 + T_{\text{proc},1} + T_{\text{proc},2}\text{ slots}$<br>
+            7. <strong>Cross-Carrier Slot:</strong> $n_{\text{sched}} = \lfloor n_{\text{ctrl}} \cdot 2^{\mu_{\text{sched}}-\mu_{\text{ctrl}}} \rfloor + K_0$<br>
+            8. <strong>PRB Bandwidth:</strong> $\text{BW}_{\text{PRB}} = 12 \times \Delta f = 12 \times 15 \times 2^\mu\text{ kHz}$
+          </div>
+        </div>
+
+        <!-- 3. Candidate Triad Positioning -->
+        <div class="cs-card">
+          <div class="cs-card-header secondary">
+            <span>3. Candidate Triad Positioning (Verbatim Pitch)</span>
+            <span class="cs-pill">Interview Elevator Pitch</span>
+          </div>
+          <div class="callout secondary" style="font-size:7.2pt;line-height:1.25;">
+            "I engineer at the intersection of <strong>3GPP Rel-16/17 L2 MAC Protocol Specifications</strong>, <strong>Hard Real-Time C++20 Baseband DSP Engines</strong>, and <strong>Qualcomm QXDM / PCIe Hardware Execution</strong>. I design rate-matching, link adaptation, and multi-carrier scheduling engines that don't just conform to 3GPP specifications on paper, but execute deterministically within 125 µs slot deadlines on real-world SoC/DSP hardware."
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-flex">
+        <!-- 4. Key Production Metrics Reconciliation Pitch -->
+        <div class="cs-card">
+          <div class="cs-card-header danger">
+            <span>4. Production Metrics Reconciliation Pitch</span>
+            <span class="cs-pill">Resume Defense</span>
+          </div>
+          <ul class="cs-list">
+            <li><strong>Metric 1: 42% $\to$ 91% (Dual-Band SCell Pre-Activation Accuracy):</strong>
+              <br>• <em>The Problem:</em> Under high-frequency Doppler channel fading, standard threshold-based SCell activation mispredicted channel quality, resulting in 58% false-trigger activations that drained UE battery and caused 34ms cold-start stalls.
+              <br>• <em>The Solution:</em> Deployed an offline-trained Gradient Boosted Decision Tree (GBDT) compiled via <strong>Treelite</strong> into branchless C code. Executed inside the 125 µs slot window (&lt;15 µs inference) evaluating RSRP/RSRQ trends, RLC queue fill rate, and Doppler shifts.
+              <br>• <em>Result:</em> Boosted prediction accuracy from <strong>42% to 91%</strong>, eliminating blind activations.
+            </li>
+            <li><strong>Metric 2: 60% $\to$ 85% (Carrier Aggregation Utilization across Cell Edge):</strong>
+              <br>• <em>The Problem:</em> Aggressive <code>sCellDeactivationTimer</code> expirations at cell edge caused SCell ping-pong deactivation, suppressing CA utilization to 60%.
+              <br>• <em>The Solution:</em> Introduced predictive buffer drain tracking in MAC LCP scheduler and dynamic CSI reporting cadence, maintaining SCell activation during bursty traffic pauses.
+              <br>• <em>Result:</em> Increased cell-edge aggregated throughput utilization from <strong>60% to 85%</strong>.
+            </li>
+          </ul>
+        </div>
+
+        <!-- 5. The 10 Golden Rules of 5G L2 MAC Baseband Development -->
+        <div class="cs-card">
+          <div class="cs-card-header">
+            <span>5. The 10 Golden Rules of 5G Baseband Development</span>
+            <span class="cs-pill">Systems Commandments</span>
+          </div>
+          <ul class="cs-list check">
+            <li><strong>1. Zero Dynamic Allocation:</strong> Never call <code>malloc</code>, <code>new</code>, or resize STL containers inside the 125 µs slot hot-path.</li>
+            <li><strong>2. Cache-Line Alignment:</strong> Align all PCIe DMA buffers and descriptor rings to 64-byte boundaries (<code>alignas(64)</code>).</li>
+            <li><strong>3. Lock-Free Coordination:</strong> Never hold an OS mutex across MAC multiplexing; use atomic lock-free SPSC queues for cross-core IPC.</li>
+            <li><strong>4. Bounded LCP Tokens:</strong> Always cap logical channel token buckets by Bucket Size Duration (BSD) to prevent burst starvation.</li>
+            <li><strong>5. Guard DAI Overflow:</strong> Handle modulo-4 Counter DAI wrap-around and out-of-order DCI arrivals in Type-2 codebooks.</li>
+            <li><strong>6. CBG Granularity:</strong> Enable CBG-based retransmission for transport blocks $> 20\text{ kB}$ to minimize air-interface retransmission tax.</li>
+            <li><strong>7. OLLA Step Asymmetry:</strong> Maintain strict step balance ($\Delta_{\text{up}} = 9 \cdot \Delta_{\text{down}}$ for 10% BLER); never make steps symmetric.</li>
+            <li><strong>8. Isolate SCell RRC from MAC:</strong> Keep asynchronous RRC configuration off the synchronous MAC CE activation path.</li>
+            <li><strong>9. Zero QXDM Log Drops:</strong> Design log ring buffers with backpressure to guarantee zero dropped packets during telemetry triage.</li>
+            <li><strong>10. Cross-Carrier Numerology Check:</strong> Always verify slot alignment formulas when aggregating carriers with differing SCS ($\mu_1 \neq \mu_2$).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>3GPP 5G NR Rel-16/17 L2 Baseband & MAC Engineering Compendium</span>
+      <span>Confidential & Proprietary — Job Switch Quick Reference</span>
+      <span>Page 4 of 4</span>
+    </footer>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+    }
+  </script>
+</body>
+</html>

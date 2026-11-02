@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern C++20/23 Systems Engineering — 4-Page Master Cheatsheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       Modern C++20/23 4-Page Technical Cheatsheet Stylesheet
+       ========================================================================== */
+    :root {
+      --bg-page: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-card-sub: #f1f5f9;
+      --bg-code: #0f172a;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-code: #f8fafc;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --primary: #1e40af;
+      --primary-soft: #eff6ff;
+      --secondary: #0d9488;
+      --secondary-soft: #f0fdfa;
+      --accent: #b45309;
+      --accent-soft: #fefce8;
+      --danger: #b91c1c;
+      --danger-soft: #fef2f2;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      --font-serif: 'Merriweather', Georgia, Cambria, serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #0b1120;
+      --bg-card: #111c33;
+      --bg-card-sub: #1e293b;
+      --bg-code: #030712;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-code: #f8fafc;
+      --border: #334155;
+      --border-strong: #475569;
+      --primary: #60a5fa;
+      --primary-soft: #1e3a8a33;
+      --secondary: #2dd4bf;
+      --secondary-soft: #134e4a33;
+      --accent: #fbbf24;
+      --accent-soft: #78350f33;
+      --danger: #f87171;
+      --danger-soft: #7f1d1d33;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #64748b;
+      font-family: var(--font-sans);
+      color: var(--text-main);
+      font-size: 8.5pt;
+      line-height: 1.34;
+      padding: 16px 0 60px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Screen Topbar Navigation */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #ffffff;
+      width: 100%;
+      max-width: 210mm;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+
+    .toolbar-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #f8fafc;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #94a3b8;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    /* A4 Cheatsheet Page Container */
+    .sheet-page {
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+      margin-bottom: 24px;
+      padding: 8mm 8mm 7mm 8mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Header & Footer on each page */
+    .page-header {
+      border-bottom: 2px solid var(--text-main);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-left-title {
+      font-family: var(--font-serif);
+      font-size: 11pt;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-sub {
+      font-size: 7pt;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-badge {
+      background: var(--primary);
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 6.8pt;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .page-footer {
+      border-top: 1px solid var(--border-strong);
+      padding-top: 3px;
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 6.5pt;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    /* Multi-column layout */
+    .content-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .content-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .col-flex {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* Cheatsheet Technical Card */
+    .cs-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 6px;
+      font-size: 7.8pt;
+    }
+
+    .cs-card-header {
+      font-family: var(--font-sans);
+      font-size: 8.2pt;
+      font-weight: 800;
+      color: var(--primary);
+      border-bottom: 1.5pt solid var(--primary);
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cs-card-header.accent {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .cs-card-header.secondary {
+      color: var(--secondary);
+      border-color: var(--secondary);
+    }
+
+    .cs-card-header.danger {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .cs-pill {
+      font-family: var(--font-mono);
+      font-size: 6.2pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 2px;
+      background: var(--border);
+      color: var(--text-main);
+    }
+
+    /* Lists & Prose */
+    .cs-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .cs-list li {
+      position: relative;
+      padding-left: 9px;
+      margin-bottom: 2.5px;
+      line-height: 1.26;
+    }
+
+    .cs-list li::before {
+      content: "•";
+      position: absolute;
+      left: 1px;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .cs-list.danger li::before {
+      color: var(--danger);
+      content: "✗";
+      font-size: 6.5pt;
+    }
+
+    .cs-list.check li::before {
+      color: var(--secondary);
+      content: "✓";
+      font-size: 6.5pt;
+    }
+
+    p {
+      margin-bottom: 3px;
+      line-height: 1.28;
+    }
+
+    strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* Tables */
+    .cs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.2pt;
+      margin: 3px 0;
+    }
+
+    .cs-table th,
+    .cs-table td {
+      border: 1px solid var(--border);
+      padding: 2.5px 4px;
+      text-align: left;
+      line-height: 1.2;
+    }
+
+    .cs-table th {
+      background: var(--bg-card-sub);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Code Snippets */
+    code, .inline-code {
+      font-family: var(--font-mono);
+      font-size: 7.2pt;
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border);
+      padding: 0.5px 2.5px;
+      border-radius: 2px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    pre.code-block {
+      background: var(--bg-code);
+      color: var(--text-code);
+      font-family: var(--font-mono);
+      font-size: 6.8pt;
+      line-height: 1.24;
+      padding: 4px 6px;
+      border-radius: 3px;
+      margin: 3px 0;
+      overflow: hidden;
+      white-space: pre-wrap;
+    }
+
+    .kw { color: #c084fc; font-weight: bold; }
+    .type { color: #38bdf8; font-weight: bold; }
+    .str { color: #4ade80; }
+    .num { color: #fbbf24; }
+    .cmt { color: #94a3b8; font-style: italic; }
+    .func { color: #f472b6; }
+    .op { color: #67e8f9; }
+
+    /* Key Callout Boxes */
+    .callout {
+      border-left: 2.5px solid var(--primary);
+      background: var(--primary-soft);
+      padding: 3px 5px;
+      margin: 3px 0;
+      border-radius: 0 3px 3px 0;
+      font-size: 7.4pt;
+      line-height: 1.24;
+    }
+
+    .callout.danger {
+      border-left-color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .callout.secondary {
+      border-left-color: var(--secondary);
+      background: var(--secondary-soft);
+    }
+
+    .callout.accent {
+      border-left-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Exact Print Rules (4 A4 Pages, Zero Overflow) */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm 8mm;
+      }
+
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      .toolbar {
+        display: none !important;
+      }
+
+      .sheet-page {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 284mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 0 4mm 0 !important;
+        margin: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Navigation Bar (Hidden in Print) -->
+  <div class="toolbar">
+    <div class="toolbar-title">
+      <span>⚡ Modern C++20/23 Systems Cheatsheet</span>
+      <span style="font-size:0.75rem;font-weight:400;color:#94a3b8;">(4-Page Print Master)</span>
+    </div>
+    <div class="toolbar-actions">
+      <a href="index.html" class="btn">🏠 Full Handbook</a>
+      <a href="nr_cheatsheet.html" class="btn">📡 5G NR Cheatsheet</a>
+      <button class="btn" id="theme-btn">🌓 Dark / Light</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF (Ctrl+P)</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       PAGE 1 OF 4: CORE LANGUAGE, MEMORY MODEL & VALUE CATEGORIES
+       ======================================================================== -->
+  <section class="sheet-page" id="page-1">
+    <div>
+      <header class="page-header">
+        <div>
+          <div class="header-left-title">Modern C++20/23 Systems Engineering Cheatsheet</div>
+          <div class="header-sub">Memory Layout, Compilation Model, Value Categories &amp; Qualifiers</div>
+        </div>
+        <div class="header-badge">PAGE 1 OF 4</div>
+      </header>
+
+      <div class="content-grid-2">
+        <!-- Column 1 -->
+        <div class="col-flex">
+          <!-- 1. Compilation & ODR -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>1. Compilation Pipeline &amp; ODR</span>
+              <span class="cs-pill">ISO/IEC 14882 §6</span>
+            </div>
+            <ul class="cs-list">
+              <li><strong>Pipeline:</strong> Preprocessing (<code>#include</code>, macros) &rarr; Compilation (AST, optimization, code-gen to <code>.o</code>) &rarr; Linking (resolves symbols across TUs &amp; static/shared libs).</li>
+              <li><strong>Translation Unit (TU):</strong> A preprocessed source file + all included headers.</li>
+              <li><strong>One Definition Rule (ODR):</strong>
+                <br>&bull; <em>Within a single TU:</em> An entity can have at most one definition.
+                <br>&bull; <em>Across multiple TUs:</em> Non-inline functions/variables must have <em>exactly one</em> definition across the entire program. Inline functions, templates, and class types can be defined in multiple TUs if definitions are <strong>identical token-by-token</strong>.
+              </li>
+              <li><strong>ODR Violation:</strong> Silent Undefined Behavior (UB) &mdash; linker is not required to diagnose; often selects an arbitrary symbol, causing subtle corruption.</li>
+            </ul>
+          </div>
+
+          <!-- 2. Value Categories -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>2. Value Categories Taxonomy</span>
+              <span class="cs-pill">Expressions</span>
+            </div>
+            <p>Every C++ expression has a <strong>type</strong> and a <strong>value category</strong>:</p>
+            <table class="cs-table">
+              <tr>
+                <th>Category</th>
+                <th>Identity?</th>
+                <th>Movable?</th>
+                <th>Definition &amp; Examples</th>
+              </tr>
+              <tr>
+                <td><strong>lvalue</strong></td>
+                <td>Yes</td>
+                <td>No</td>
+                <td>Named variable, function, reference to object: <code>x</code>, <code>*ptr</code>, <code>arr[0]</code>, <code>++i</code>, string literal <code>"abc"</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>xvalue</strong></td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>eXpiring object: <code>std::move(x)</code>, cast to rvalue ref <code>static_cast&lt;T&amp;&amp;&gt;(x)</code>, member of rvalue <code>f().m</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>prvalue</strong></td>
+                <td>No</td>
+                <td>Yes</td>
+                <td>Pure rvalue (computes value): literal <code>42</code>, temporary <code>T()</code>, arithmetic <code>x + y</code>, lambda expression.</td>
+              </tr>
+            </table>
+            <div class="callout secondary">
+              <strong>Hierarchy:</strong> <code>glvalue = lvalue &cup; xvalue</code> (has identity). <code>rvalue = prvalue &cup; xvalue</code> (can be stolen/moved).
+            </div>
+          </div>
+
+          <!-- 3. Move Semantics & Forwarding -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>3. std::move vs. std::forward</span>
+              <span class="cs-pill">Zero-Cost Casts</span>
+            </div>
+            <ul class="cs-list">
+              <li><code>std::move(x)</code>: <strong>Unconditional</strong> static cast to <code>remove_reference_t&lt;T&gt;&amp;&amp;</code>. Does <em>not</em> move any bytes! Signals that resources of <code>x</code> may be pillaged.</li>
+              <li><code>std::forward&lt;T&gt;(arg)</code>: <strong>Conditional</strong> cast. Yields rvalue ref if <code>T</code> was deduced as non-reference; yields lvalue ref if <code>T</code> was deduced as lvalue ref.</li>
+              <li><strong>Reference Collapsing Rules:</strong>
+                <br><code>&amp; + &amp; &rarr; &amp;</code> | <code>&amp; + &amp;&amp; &rarr; &amp;</code> | <code>&amp;&amp; + &amp; &rarr; &amp;</code> | <code>&amp;&amp; + &amp;&amp; &rarr; &amp;&amp;</code>
+              </li>
+              <li><strong>Universal / Forwarding Reference:</strong> <code>T&amp;&amp;</code> in a type-deducing context (template or <code>auto&amp;&amp;</code>). If initialized with lvalue, <code>T = U&amp;</code>; if rvalue, <code>T = U</code>.</li>
+            </ul>
+<pre class="code-block"><span class="kw">template</span>&lt;<span class="kw">typename</span> <span class="type">T</span>&gt;
+<span class="kw">void</span> <span class="func">wrapper</span>(<span class="type">T</span>&amp;&amp; arg) {
+    <span class="func">target</span>(<span class="type">std</span>::<span class="func">forward</span>&lt;<span class="type">T</span>&gt;(arg)); <span class="cmt">// Preserves original value category</span>
+}</pre>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-flex">
+          <!-- 4. Memory Layout & Alignment -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>4. Memory Layout &amp; Strict Aliasing</span>
+              <span class="cs-pill">Hardware Reality</span>
+            </div>
+            <ul class="cs-list">
+              <li><strong>Virtual Segments:</strong> Text (code), Rodata (constants), Data (init globals), BSS (zero-init globals), Heap (grows up), Stack (grows down).</li>
+              <li><strong>Alignment:</strong> Object of size $S$ and alignment $A$ must reside at address $Addr \equiv 0 \pmod A$. Compiler inserts padding bytes to satisfy alignment.</li>
+              <li><code>alignas(N)</code> / <code>alignof(T)</code>: Enforces custom alignment (e.g. <code>alignas(64)</code> to avoid CPU false sharing across cache lines).</li>
+              <li><strong>Strict Aliasing Rule:</strong> Pointers of distinct types cannot alias the same memory address. Compiler assumes <code>float*</code> never points to <code>int*</code>, reordering instructions.
+                <br>&bull; <em>Exceptions:</em> <code>char*</code>, <code>unsigned char*</code>, <code>std::byte*</code>.
+                <br>&bull; <em>Correct Type Punning:</em> Use <code>std::bit_cast&lt;To&gt;(from)</code> (C++20) or <code>std::memcpy</code>. <strong>Never</strong> use <code>*(reinterpret_cast&lt;T*&gt;(&amp;u))</code>!
+              </li>
+            </ul>
+          </div>
+
+          <!-- 5. Const & Compile-Time Qualifiers -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>5. Const, Constexpr, Consteval &amp; Constinit</span>
+              <span class="cs-pill">C++20 Matrix</span>
+            </div>
+            <table class="cs-table">
+              <tr>
+                <th>Keyword</th>
+                <th>Eval Time</th>
+                <th>Mutability</th>
+                <th>Storage / Meaning</th>
+              </tr>
+              <tr>
+                <td><code>const</code></td>
+                <td>Runtime / Compile</td>
+                <td>Read-only</td>
+                <td>Object cannot be modified via this identifier.</td>
+              </tr>
+              <tr>
+                <td><code>constexpr</code></td>
+                <td>Compile / Runtime</td>
+                <td>Const</td>
+                <td>Can be evaluated at compile-time if inputs known.</td>
+              </tr>
+              <tr>
+                <td><code>consteval</code></td>
+                <td><strong>Compile-only</strong></td>
+                <td>Const</td>
+                <td>Immediate function: must evaluate during compile.</td>
+              </tr>
+              <tr>
+                <td><code>constinit</code></td>
+                <td>Compile-init</td>
+                <td><strong>Mutable</strong></td>
+                <td>Enforces static init, avoids Static Init Order Fiasco.</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 6. UB vs Unspecified vs Implementation-Defined -->
+          <div class="cs-card">
+            <div class="cs-card-header danger">
+              <span>6. Behavior Classification &amp; Safety</span>
+              <span class="cs-pill">ISO Standard</span>
+            </div>
+            <ul class="cs-list danger">
+              <li><strong>Undefined Behavior (UB):</strong> No requirements; compiler may generate invalid code, crash, or format disk. (e.g., signed overflow, out-of-bounds, use-after-free, null dereference, uninitialized reads).</li>
+              <li><strong>Implementation-Defined:</strong> Unspecified behavior where the compiler vendor must document its choice (e.g., <code>sizeof(int)</code>, sign extension on right shift of signed int).</li>
+              <li><strong>Unspecified:</strong> Valid choice from defined set; vendor does not document (e.g., order of function argument evaluation).</li>
+            </ul>
+            <div class="callout danger">
+              <strong>Crucial Rule:</strong> Signed integer overflow is <strong>UB</strong>; unsigned integer overflow is well-defined (wraps modulo $2^N$).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>UBIVERSE TECHNICAL COMPENDIUM • ISO/IEC 14882:2023 (C++23)</span>
+      <span>PAGE 1 OF 4: CORE LANGUAGE &amp; MEMORY ARCHITECTURE</span>
+    </footer>
+  </section>
+
+  <!-- ========================================================================
+       PAGE 2 OF 4: OBJECT MODEL, RAII, LIFETIME & SMART POINTERS
+       ======================================================================== -->
+  <section class="sheet-page" id="page-2">
+    <div>
+      <header class="page-header">
+        <div>
+          <div class="header-left-title">Modern C++20/23 Systems Engineering Cheatsheet</div>
+          <div class="header-sub">Object Model, Dynamic Dispatch, RAII &amp; Smart Pointer Mechanics</div>
+        </div>
+        <div class="header-badge">PAGE 2 OF 4</div>
+      </header>
+
+      <div class="content-grid-2">
+        <!-- Column 1 -->
+        <div class="col-flex">
+          <!-- 1. Vtable & Dynamic Dispatch -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>1. Vtable, VPTR &amp; Dynamic Dispatch</span>
+              <span class="cs-pill">Polymorphism</span>
+            </div>
+            <ul class="cs-list">
+              <li><strong>VPTR (Virtual Table Pointer):</strong> Embedded hidden pointer added to classes with $\ge 1$ virtual function (usually at offset 0). Costs 8 bytes per object on 64-bit systems.</li>
+              <li><strong>VTABLE:</strong> Per-class static array of function pointers stored in <code>.rodata</code>. Contains slot per virtual function + RTTI pointer.</li>
+              <li><strong>Dispatch Cost:</strong> Double pointer indirection: <code>this-&gt;vptr[slot](this, args)</code> &rarr; prevents compiler inlining + potential branch misprediction / cache miss.</li>
+              <li><strong>Multiple Inheritance:</strong> Class has multiple VPTRs (one per base with virtuals). Passing derived to secondary base requires <code>this</code> pointer adjustment (offset add/sub).</li>
+              <li><strong>Virtual Inheritance (Diamond Problem):</strong> Base shared uniquely via virtual base table (VBTABLE) or negative vtable offsets. Prevents duplicate state.</li>
+            </ul>
+<pre class="code-block"><span class="kw">class</span> <span class="type">Base</span> { <span class="kw">virtual void</span> <span class="func">f</span>(); }; <span class="cmt">// sizeof = 8 (VPTR)</span>
+<span class="kw">class</span> <span class="type">Derived</span> : <span class="kw">public</span> <span class="type">Base</span> { <span class="kw">int</span> m_x; }; <span class="cmt">// sizeof = 16 (8 vptr + 4 int + 4 padding)</span></pre>
+          </div>
+
+          <!-- 2. Special Member Functions & Rule of 0/3/5 -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>2. Special Member Functions &amp; Rule of 0/3/5</span>
+              <span class="cs-pill">Class Lifetimes</span>
+            </div>
+            <table class="cs-table">
+              <tr>
+                <th>Declared by User</th>
+                <th>Default Ctor</th>
+                <th>Copy Ctor</th>
+                <th>Copy Assign</th>
+                <th>Move Ctor</th>
+                <th>Move Assign</th>
+              </tr>
+              <tr>
+                <td><em>None</em></td>
+                <td>Generated</td>
+                <td>Generated</td>
+                <td>Generated</td>
+                <td>Generated</td>
+                <td>Generated</td>
+              </tr>
+              <tr>
+                <td>Any Ctor (e.g. param)</td>
+                <td><strong>Deleted</strong></td>
+                <td>Generated</td>
+                <td>Generated</td>
+                <td>Generated</td>
+                <td>Generated</td>
+              </tr>
+              <tr>
+                <td>Destructor</td>
+                <td>Generated</td>
+                <td>Generated*</td>
+                <td>Generated*</td>
+                <td><strong>Deleted</strong></td>
+                <td><strong>Deleted</strong></td>
+              </tr>
+              <tr>
+                <td>Copy Ctor / Assign</td>
+                <td>Generated</td>
+                <td>Declared</td>
+                <td>Generated</td>
+                <td><strong>Deleted</strong></td>
+                <td><strong>Deleted</strong></td>
+              </tr>
+              <tr>
+                <td>Move Ctor / Assign</td>
+                <td>Generated</td>
+                <td><strong>Deleted</strong></td>
+                <td><strong>Deleted</strong></td>
+                <td>Declared</td>
+                <td><strong>Deleted</strong></td>
+              </tr>
+            </table>
+            <div class="callout secondary">
+              <strong>Rule of Zero:</strong> Use RAII types (<code>std::string</code>, <code>std::vector</code>, <code>std::unique_ptr</code>) &rarr; write 0 special members.
+              <br><strong>Rule of Five:</strong> If custom dtor needed (manual resource), declare all 5 (Dtor, Copy Ctor, Copy Assign, Move Ctor, Move Assign).
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-flex">
+          <!-- 3. Smart Pointers Breakdown -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>3. Smart Pointer Architectural Comparison</span>
+              <span class="cs-pill">&lt;memory&gt;</span>
+            </div>
+            <table class="cs-table">
+              <tr>
+                <th>Smart Pointer</th>
+                <th>Size (64-bit)</th>
+                <th>Deleter Placement</th>
+                <th>Thread Safety</th>
+              </tr>
+              <tr>
+                <td><code>std::unique_ptr&lt;T, D&gt;</code></td>
+                <td>8 bytes (stateless)</td>
+                <td>Part of type <code>D</code></td>
+                <td>Not thread-safe; exclusive.</td>
+              </tr>
+              <tr>
+                <td><code>std::shared_ptr&lt;T&gt;</code></td>
+                <td>16 bytes (2 ptrs)</td>
+                <td>Type-erased in Ctrl Block</td>
+                <td>Ctrl block ref-counts are atomic.</td>
+              </tr>
+              <tr>
+                <td><code>std::weak_ptr&lt;T&gt;</code></td>
+                <td>16 bytes (2 ptrs)</td>
+                <td>Type-erased in Ctrl Block</td>
+                <td>Must call <code>lock()</code> to access.</td>
+              </tr>
+            </table>
+            <ul class="cs-list" style="margin-top:3px;">
+              <li><code>unique_ptr</code>: Zero overhead over raw pointer. Move-only. Default choice for ownership. <code>std::make_unique&lt;T&gt;()</code>.</li>
+              <li><code>shared_ptr</code>: Shared ownership via heap-allocated <strong>Control Block</strong> (holds <code>use_count</code>, <code>weak_count</code>, custom deleter, allocator).</li>
+              <li><code>std::make_shared&lt;T&gt;</code>: Single heap allocation for both object + control block (cache-friendly). <em>Trade-off:</em> memory not freed until <code>weak_count == 0</code>.</li>
+              <li><code>weak_ptr</code>: Non-owning observer. Breaks reference cycles (e.g. parent-child graph). Does not prevent object destruction.</li>
+            </ul>
+          </div>
+
+          <!-- 4. Exception Safety Guarantees -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>4. Exception Safety Guarantees</span>
+              <span class="cs-pill">noexcept Idiom</span>
+            </div>
+            <ul class="cs-list">
+              <li><strong>Basic Guarantee:</strong> Invariants preserved; no memory or resource leaks. State may be altered but valid.</li>
+              <li><strong>Strong Guarantee:</strong> Commit-or-rollback semantics. Operation succeeds, or state remains exactly as before the call.</li>
+              <li><strong>Nothrow / Nofail (<code>noexcept</code>):</strong> Operation is mathematically guaranteed never to throw exceptions.</li>
+              <li><code>noexcept</code> specifier: Crucial for move constructors. If a move constructor is not marked <code>noexcept</code>, <code>std::vector</code> will fall back to <strong>copying</strong> elements during reallocation to preserve strong exception guarantee.</li>
+            </ul>
+          </div>
+
+          <!-- 5. RAII & Copy-and-Swap -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>5. RAII &amp; Copy-and-Swap Idiom</span>
+              <span class="cs-pill">Idioms</span>
+            </div>
+<pre class="code-block"><span class="kw">class</span> <span class="type">Buffer</span> {
+    <span class="type">size_t</span> m_size; <span class="type">int</span>* m_data;
+<span class="kw">public</span>:
+    <span class="kw">friend void</span> <span class="func">swap</span>(<span class="type">Buffer</span>&amp; a, <span class="type">Buffer</span>&amp; b) <span class="kw">noexcept</span> {
+        <span class="kw">using</span> <span class="type">std</span>::<span class="func">swap</span>;
+        <span class="func">swap</span>(a.m_size, b.m_size); <span class="func">swap</span>(a.m_data, b.m_data);
+    }
+    <span class="cmt">// Unified assignment operator (copy AND move!)</span>
+    <span class="type">Buffer</span>&amp; <span class="kw">operator</span>=(<span class="type">Buffer</span> other) <span class="kw">noexcept</span> {
+        <span class="func">swap</span>(*<span class="kw">this</span>, other);
+        <span class="kw">return</span> *<span class="kw">this</span>;
+    }
+};</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>UBIVERSE TECHNICAL COMPENDIUM • ISO/IEC 14882:2023 (C++23)</span>
+      <span>PAGE 2 OF 4: OBJECT MODEL, LIFETIME &amp; SMART POINTERS</span>
+    </footer>
+  </section>
+
+  <!-- ========================================================================
+       PAGE 3 OF 4: MODERN C++20/23, CONCURRENCY & LOW-LATENCY
+       ======================================================================== -->
+  <section class="sheet-page" id="page-3">
+    <div>
+      <header class="page-header">
+        <div>
+          <div class="header-left-title">Modern C++20/23 Systems Engineering Cheatsheet</div>
+          <div class="header-sub">Concepts, Ranges, Coroutines, Memory Ordering &amp; Lock-Free Concurrency</div>
+        </div>
+        <div class="header-badge">PAGE 3 OF 4</div>
+      </header>
+
+      <div class="content-grid-2">
+        <!-- Column 1 -->
+        <div class="col-flex">
+          <!-- 1. Concepts & Constraints -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>1. Concepts &amp; Constraints (C++20)</span>
+              <span class="cs-pill">Compile-Time Metaprogramming</span>
+            </div>
+            <p>Replaces convoluted SFINAE and <code>std::enable_if_t</code> with clean compiler-verified type constraints:</p>
+<pre class="code-block"><span class="kw">template</span>&lt;<span class="kw">typename</span> <span class="type">T</span>&gt;
+<span class="kw">concept</span> <span class="type">Numeric</span> = <span class="type">std</span>::<span class="type">is_arithmetic_v</span>&lt;<span class="type">T</span>&gt;;
+
+<span class="kw">template</span>&lt;<span class="kw">typename</span> <span class="type">T</span>&gt;
+<span class="kw">concept</span> <span class="type">BufferLike</span> = <span class="kw">requires</span>(<span class="type">T</span> x) {
+    { x.size() } &rarr; <span class="type">std</span>::<span class="type">same_as</span>&lt;<span class="type">size_t</span>&gt;;
+    { x.data() } &rarr; <span class="type">std</span>::<span class="type">convertible_to</span>&lt;<span class="kw">const void</span>*&gt;;
+};
+
+<span class="cmt">// Terse syntax usage</span>
+<span class="kw">void</span> <span class="func">process</span>(<span class="type">BufferLike</span> <span class="kw">auto</span>&amp;&amp; buf);</pre>
+          </div>
+
+          <!-- 2. Modern C++20/23 Features -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>2. C++20 &amp; C++23 High-Yield Additions</span>
+              <span class="cs-pill">Language Evolution</span>
+            </div>
+            <ul class="cs-list">
+              <li><code>std::span&lt;T, Extent&gt;</code>: Non-owning view over contiguous memory (pointer + length). Zero overhead, bounds-safe parameter passing.</li>
+              <li><code>std::expected&lt;T, E&gt;</code> (C++23): Holds value of type <code>T</code> or error of type <code>E</code>. Monadic operations: <code>and_then()</code>, <code>transform()</code>. Zero exception overhead.</li>
+              <li><code>std::jthread</code> (C++20): Automatically joins in destructor; supports cooperative cancellation tokens (<code>std::stop_token</code>).</li>
+              <li><strong>Ranges &amp; Views (C++20):</strong> Composable, lazy pipeline transformations:
+                <br><code>auto v = arr | std::views::filter(pred) | std::views::take(5);</code>
+              </li>
+              <li><code>std::mdspan</code> (C++23): Non-owning multidimensional array view with customizable layout mapping (Row-major, Column-major, Strided).</li>
+              <li><strong>Coroutines (C++20):</strong> Stackless cooperative functions using <code>co_await</code>, <code>co_yield</code>, <code>co_return</code>. Return custom promise types.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-flex">
+          <!-- 3. Atomic Memory Orders -->
+          <div class="cs-card">
+            <div class="cs-card-header accent">
+              <span>3. C++ Memory Model &amp; Atomic Orders</span>
+              <span class="cs-pill">std::memory_order</span>
+            </div>
+            <p>Controls hardware compiler instruction reordering and CPU cache coherence barriers:</p>
+            <table class="cs-table">
+              <tr>
+                <th>Memory Order</th>
+                <th>Operation</th>
+                <th>Guarantee &amp; Usage</th>
+              </tr>
+              <tr>
+                <td><code>relaxed</code></td>
+                <td>Load / Store</td>
+                <td>Atomicity only; no ordering or sync. (Counters).</td>
+              </tr>
+              <tr>
+                <td><code>acquire</code></td>
+                <td>Load</td>
+                <td>Subsequent reads/writes cannot be reordered before this load.</td>
+              </tr>
+              <tr>
+                <td><code>release</code></td>
+                <td>Store</td>
+                <td>Prior reads/writes cannot be reordered after this store.</td>
+              </tr>
+              <tr>
+                <td><code>acq_rel</code></td>
+                <td>RMW</td>
+                <td>Combines acquire + release semantics.</td>
+              </tr>
+              <tr>
+                <td><code>seq_cst</code></td>
+                <td>All</td>
+                <td>Sequential Consistency. Globally total order (Default).</td>
+              </tr>
+            </table>
+            <div class="callout accent">
+              <strong>Acquire-Release Pair Pattern:</strong> Store-Release on thread A <em>synchronizes-with</em> Load-Acquire on thread B, ensuring all data written prior to release is visible to thread B.
+            </div>
+          </div>
+
+          <!-- 4. Low-Latency Lock-Free Architecture -->
+          <div class="cs-card">
+            <div class="cs-card-header secondary">
+              <span>4. Low-Latency &amp; Lock-Free Ring Buffer</span>
+              <span class="cs-pill">Sub-Microsecond RT</span>
+            </div>
+            <ul class="cs-list">
+              <li><strong>False Sharing:</strong> When two threads on different cores write to distinct variables on the same 64-byte CPU cache line &rarr; bus contention &amp; cache ping-pong.
+                <br>&bull; <em>Remedy:</em> <code>alignas(std::hardware_destructive_interference_size)</code>.
+              </li>
+              <li><strong>Wait-Free Single-Producer Single-Consumer (SPSC) Queue:</strong>
+                <br>&bull; Separate head and tail indexes into isolated 64-byte cache lines.
+                <br>&bull; Tail updated with <code>memory_order_release</code>; read with <code>memory_order_acquire</code>.
+                <br>&bull; Zero mutexes, zero kernel transitions, zero heap allocation.
+              </li>
+              <li><strong>Branch Prediction Hints:</strong> <code>[[likely]]</code>, <code>[[unlikely]]</code>.</li>
+            </ul>
+<pre class="code-block"><span class="kw">struct</span> <span class="kw">alignas</span>(<span class="num">64</span>) <span class="type">SpscQueue</span> {
+    <span class="type">std</span>::<span class="type">atomic</span>&lt;<span class="type">size_t</span>&gt; m_head{<span class="num">0</span>};
+    <span class="kw">alignas</span>(<span class="num">64</span>) <span class="type">std</span>::<span class="type">atomic</span>&lt;<span class="type">size_t</span>&gt; m_tail{<span class="num">0</span>};
+    <span class="cmt">// Pointers separated by 64 bytes prevent false sharing!</span>
+};</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>UBIVERSE TECHNICAL COMPENDIUM • ISO/IEC 14882:2023 (C++23)</span>
+      <span>PAGE 3 OF 4: CONCEPTS, CONCURRENCY &amp; LOW-LATENCY SYSTEMS</span>
+    </footer>
+  </section>
+
+  <!-- ========================================================================
+       PAGE 4 OF 4: STL INTERNALS, PITFALLS & 16 GOLDEN RULES
+       ======================================================================== -->
+  <section class="sheet-page" id="page-4">
+    <div>
+      <header class="page-header">
+        <div>
+          <div class="header-left-title">Modern C++20/23 Systems Engineering Cheatsheet</div>
+          <div class="header-sub">STL Containers Complexity, Invalidation Rules, Pitfalls &amp; 16 Golden Rules</div>
+        </div>
+        <div class="header-badge">PAGE 4 OF 4</div>
+      </header>
+
+      <div class="content-grid-2">
+        <!-- Column 1 -->
+        <div class="col-flex">
+          <!-- 1. STL Complexity Table -->
+          <div class="cs-card">
+            <div class="cs-card-header">
+              <span>1. STL Containers Complexity &amp; Geometry</span>
+              <span class="cs-pill">Big-O &amp; Memory</span>
+            </div>
+            <table class="cs-table">
+              <tr>
+                <th>Container</th>
+                <th>Layout Geometry</th>
+                <th>Access / Search</th>
+                <th>Insert / Erase</th>
+                <th>Iterator Invalidation</th>
+              </tr>
+              <tr>
+                <td><code>vector</code></td>
+                <td>Contiguous array</td>
+                <td>$O(1)$ idx / $O(N)$ find</td>
+                <td>$O(1)$ back / $O(N)$ mid</td>
+                <td>Realloc: all. Else: $\ge$ insert pos.</td>
+              </tr>
+              <tr>
+                <td><code>deque</code></td>
+                <td>Chunks of arrays</td>
+                <td>$O(1)$ idx / $O(N)$ find</td>
+                <td>$O(1)$ front/back</td>
+                <td>Front/back: iters invalid, refs valid.</td>
+              </tr>
+              <tr>
+                <td><code>list</code></td>
+                <td>Doubly-linked nodes</td>
+                <td>$O(N)$ seq access</td>
+                <td>$O(1)$ known pos</td>
+                <td>Only erased node invalidated.</td>
+              </tr>
+              <tr>
+                <td><code>map / set</code></td>
+                <td>Red-Black Tree</td>
+                <td>$O(\log N)$ search</td>
+                <td>$O(\log N)$ insert</td>
+                <td>Only erased node invalidated.</td>
+              </tr>
+              <tr>
+                <td><code>unordered_map</code></td>
+                <td>Hash table + buckets</td>
+                <td>Avg $O(1)$ / Wst $O(N)$</td>
+                <td>Avg $O(1)$ / Wst $O(N)$</td>
+                <td>Rehash: all iters. References valid!</td>
+              </tr>
+              <tr>
+                <td><code>flat_map</code> (C++23)</td>
+                <td>Sorted vectors</td>
+                <td>$O(\log N)$ binary search</td>
+                <td>$O(N)$ insert/erase</td>
+                <td>All iterators on modification.</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 2. Dangerous Senior Pitfalls -->
+          <div class="cs-card">
+            <div class="cs-card-header danger">
+              <span>2. High-Frequency Interview Pitfalls</span>
+              <span class="cs-pill">Traps</span>
+            </div>
+            <ul class="cs-list danger">
+              <li><strong>Object Slicing:</strong> Passing derived object by value to a base class parameter &rarr; derived members stripped away; vtable sliced to base. (Pass by <code>const Base&amp;</code>).</li>
+              <li><strong>Dangling Lambda References:</strong> Capturing local variables by reference <code>[&amp;]</code> into a lambda that outlives the caller scope (e.g. dispatched to thread pool).</li>
+              <li><strong>Virtual Calls in Ctor / Dtor:</strong> Virtual mechanism is disabled during base constructor/destructor execution! The base version is statically invoked because derived subobject does not exist yet.</li>
+              <li><strong>Self-Assignment:</strong> Missing <code>if (this == &amp;rhs) return *this;</code> in hand-written copy assignment operator &rarr; deletes own resources before reading.</li>
+              <li><strong>Mismatched New/Delete:</strong> Allocating with <code>new[]</code> and freeing with <code>delete</code> (without brackets) &rarr; Undefined Behavior (dtors not called).</li>
+              <li><strong>Static Initialization Order Fiasco:</strong> Global variables in different TUs have unspecified initialization order. Fix: Construct on first use (Meyers' Singleton).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-flex">
+          <!-- 3. The 16 Golden Rules -->
+          <div class="cs-card">
+            <div class="cs-card-header secondary">
+              <span>3. The 16 Golden Rules of C++ Systems Development</span>
+              <span class="cs-pill">Day 17 Synthesis</span>
+            </div>
+            <ul class="cs-list check" style="font-size:7.4pt;">
+              <li><strong>01.</strong> RAII everywhere: Acquire in constructor, release in destructor.</li>
+              <li><strong>02.</strong> Prefer Rule of Zero over Rule of Five. Use modern standard library wrappers.</li>
+              <li><strong>03.</strong> <code>std::unique_ptr</code> is the default smart pointer. <code>shared_ptr</code> only for shared ownership.</li>
+              <li><strong>04.</strong> Pass by <code>const&amp;</code> for non-trivial types; pass by value only for primitives or to sink via <code>std::move</code>.</li>
+              <li><strong>05.</strong> Mark all non-throwing move constructors and swap functions with <code>noexcept</code>.</li>
+              <li><strong>06.</strong> Declare all single-argument constructors <code>explicit</code> to forbid implicit conversions.</li>
+              <li><strong>07.</strong> Base class destructors MUST be <code>virtual</code> (or <code>protected</code> non-virtual).</li>
+              <li><strong>08.</strong> Always mark derived overriding functions with <code>override</code> keyword.</li>
+              <li><strong>09.</strong> Use <code>constexpr</code>/<code>consteval</code> for compile-time computations; minimize runtime cost.</li>
+              <li><strong>10.</strong> Prefer <code>std::string_view</code> and <code>std::span</code> over <code>const std::string&amp;</code> / raw pointer pairs.</li>
+              <li><strong>11.</strong> Never write <code>using namespace std;</code> in header files. Pollutes caller namespace.</li>
+              <li><strong>12.</strong> Initialize member variables in class declaration or constructor initializer list in <strong>declaration order</strong>.</li>
+              <li><strong>13.</strong> Avoid <code>std::bind</code> and raw function pointers; prefer lightweight C++ lambdas.</li>
+              <li><strong>14.</strong> In multi-threaded code, synchronize via <code>std::atomic</code> with acquire-release semantics.</li>
+              <li><strong>15.</strong> Pad concurrent data structures to 64 bytes to eliminate cache false sharing.</li>
+              <li><strong>16.</strong> Use <code>std::expected</code> or error codes for recoverable failures; reserve exceptions for exceptional events.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>UBIVERSE TECHNICAL COMPENDIUM • ISO/IEC 14882:2023 (C++23)</span>
+      <span>PAGE 4 OF 4: STL INTERNALS, PITFALLS &amp; 16 GOLDEN RULES</span>
+    </footer>
+  </section>
+
+  <script>
+    // Theme toggle logic
+    const themeBtn = document.getElementById('theme-btn');
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+    });
+  </script>
+</body>
+</html>
